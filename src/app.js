@@ -1,4 +1,5 @@
 import { CLASSES, ENCOUNTERS, createGame, actor, startEncounter, act, descend, validSave } from './engine.js';
+import { characterMove } from './animations.js';
 
 const paths = {
   sword: '<path d="m14 3 7-1-1 7-11 11-5-5Z"/><path d="m4 13 7 7M3 21l4-4M14 3l6 6"/>',
@@ -32,7 +33,7 @@ const key = 'the-hollow-save-v1';
 let state = createGame();
 try { const saved = JSON.parse(localStorage.getItem(key)); if (validSave(saved)) state = saved; } catch { /* A fresh expedition is safe if local storage is unavailable. */ }
 let sound = false, busy = false, panel = 'log', modal = null, selection = [], notice = '', storageWarning = false;
-let audio;
+let audio, motion = null;
 const app = document.querySelector('#app');
 function persist() { try { localStorage.setItem(key, JSON.stringify(state)); } catch { storageWarning = true; } }
 function tone() {
@@ -41,6 +42,9 @@ function tone() {
 }
 function sprite(id, className = '') { const index = CLASSES.findIndex(c => c.id === id); const [left,right] = [[20,342],[343,627],[630,931],[934,1198],[1200,1496],[1500,1797],[1801,2073]][index]; return `<div class="sprite ${className}" style="--crop-width:${right-left};--sheet-position:${left/(2073-(right-left))*100}%" role="img" aria-label="${CLASSES[index].name} pixel art"></div>`; }
 function hpBar(value, max, type = '') { return `<div class="meter ${type}"><span style="width:${Math.max(0, value / max * 100)}%"></span></div>`; }
+function moveEffects(heroClass) {
+  return `<div class="move-effects effect-${motion.effect}" aria-hidden="true"><span class="move-arc"></span><span class="move-ring"></span><span class="move-ring second"></span><span class="move-sigil">${icon(motion.action === 'guard' ? 'shield' : heroClass.icon, 100)}</span><span class="move-flash"></span><span class="move-motes">${[0,1,2,3,4].map(n=>`<i style="--particle:${n}"></i>`).join('')}</span></div>`;
+}
 function render() {
   const encounter = ENCOUNTERS[state.depth], current = actor(state), currentClass = current && CLASSES.find(c => c.id === current.id), playing = state.status === 'battle';
   const enemyHp = state.enemy?.hp ?? encounter.hp;
@@ -54,11 +58,11 @@ function render() {
       <section class="page-heading"><div><div class="eyebrow"><span class="tiny-diamond"></span> THE DESCENT <span class="eyebrow-separator">/</span> EXPEDITION 001</div><h1>${encounter.name}<span class="title-dot">.</span></h1><p>${encounter.description}</p></div><div class="depth-badge"><span>DEPTH</span><strong>${roman[state.depth]} <em>/ III</em></strong><div class="depth-dots">${roman.map((r,i) => `<i class="${i <= state.depth ? 'filled' : ''}"></i>`).join('')}</div></div></section>
       <div class="game-layout">
         <section class="battle-column" aria-label="Battlefield">
-          <div class="arena depth-${state.depth} ${busy ? 'impact' : ''} ${state.status === 'complete' ? 'cleansed' : ''}">
+          <div class="arena depth-${state.depth} ${state.status === 'complete' ? 'cleansed' : ''}" data-resolving="${busy}" data-phase="${motion ? 'hero' : 'idle'}">
             <div class="arena-shade"></div>
             <div class="arena-top"><span class="location-label">${icon('map', 14)} THE HOLLOW <span>/</span> FLOOR 0${state.depth + 1}</span><span class="encounter-label"><i></i>${playing ? 'IN COMBAT' : state.status === 'preparing' ? 'UNEXPLORED' : state.status === 'defeat' ? 'PARTY FALLEN' : 'AREA CLEARED'}</span></div>
             <div class="enemy-hud"><div class="enemy-heading"><span class="enemy-icon">${icon('crosshair', 17)}</span><div><strong>${encounter.enemy}</strong><small>${encounter.title}</small></div><span class="level-badge">LV. ${state.depth + 3}</span></div>${hpBar(enemyHp, encounter.hp, 'enemy-meter')}<div class="enemy-numbers"><span>${state.enemy?.burn ? `${icon('fire', 12)} BURNING · ${state.enemy.burn} TURNS` : 'ELITE CREATURE'}</span><span>${enemyHp} <em>/ ${encounter.hp}</em></span></div></div>
-            <div class="stage-party">${state.party.map((p,i) => `<div class="stage-hero ${p.hp <= 0 ? 'fallen' : ''} ${current?.id === p.id ? 'stage-active' : ''}" style="--slot:${i}">${sprite(p.id)}<span class="hero-shadow"></span><div class="stage-name">${current?.id === p.id ? '<i></i>' : ''}${CLASSES.find(c => c.id === p.id).name}${p.guard ? icon('shield',12) : ''}</div></div>`).join('')}</div>
+            <div class="stage-party">${state.party.map((p,i) => { const c = CLASSES.find(c => c.id === p.id), moving = motion?.heroId === p.id; return `<div class="stage-hero ${p.hp <= 0 ? 'fallen' : ''} ${current?.id === p.id ? 'stage-active' : ''} ${p.guard ? 'guarding' : ''} ${moving ? 'performing' : ''}" data-hero="${p.id}" data-move="${moving ? motion.action : 'idle'}" style="--slot:${i};--fx-color:${moving ? motion.color : c.color};${moving ? `--move-name:${motion.name};--move-duration:${motion.duration}ms` : ''}">${sprite(p.id)}<span class="hero-shadow"></span><span class="guard-ward" aria-hidden="true">${icon('shield',100)}</span>${moving ? moveEffects(c) : ''}<div class="stage-name">${current?.id === p.id ? '<i></i>' : ''}${moving ? motion.label : c.name}${p.guard ? icon('shield',12) : ''}</div></div>`; }).join('')}</div>
             ${!playing ? `<div class="arena-message ${state.status === 'preparing' ? 'intro-message' : ''}"><span>${state.status === 'preparing' ? 'YOUR STORY BEGINS BELOW' : state.status === 'defeat' ? 'THE LIGHT HAS FADED' : state.status === 'complete' ? 'THE HOLLOW IS SILENT' : 'A MOMENT OF RESPITE'}</span><h2>${state.status === 'preparing' ? 'Into the unknown.' : state.status === 'defeat' ? 'Darkness prevails.' : state.status === 'complete' ? 'Dawn will come again.' : 'The way opens.'}</h2><button class="primary-button" data-action="${state.status === 'preparing' ? 'begin' : state.status === 'victory' ? 'descend' : 'restart'}">${state.status === 'preparing' ? 'Begin encounter' : state.status === 'victory' ? 'Descend deeper' : 'New expedition'}${icon('arrow',17)}</button></div>` : ''}
             <div class="arena-bottom"><span>${icon('fire',14)} ${playing ? `ROUND ${String(state.round).padStart(2,'0')}` : 'THE TORCHES ARE LIT'}</span><span>${playing ? `${currentClass.name}'s turn` : encounter.flavor}</span><span class="arena-corner">${icon('expand',14)}</span></div>
           </div>
@@ -101,12 +105,71 @@ function renderModal() {
 }
 function closeModal() { modal = null; document.querySelector('#game-dialog')?.close(); }
 function openModal(type) { modal = type; selection = state.party.map(p => p.id); renderModal(); }
+const animationDelay = ms => new Promise(resolve => setTimeout(resolve, ms));
+function floatingNumber(parent, value, healing = false) {
+  const number = document.createElement('span');
+  number.className = `damage-number${healing ? ' healing-number' : ''}`;
+  number.setAttribute('aria-hidden', 'true'); number.textContent = `${healing ? '+' : '−'}${value}`;
+  parent.append(number);
+}
+function launchProjectile() {
+  const ranged = ['sorcerer', 'witch', 'gunslinger'].includes(motion.heroId);
+  if (!ranged || !['attack','skill'].includes(motion.action)) return;
+  const arena = app.querySelector('.arena'), hero = app.querySelector(`[data-hero="${motion.heroId}"]`);
+  const bounds = arena.getBoundingClientRect(), origin = hero.getBoundingClientRect();
+  const x = origin.left - bounds.left + origin.width * .78, y = origin.top - bounds.top + origin.height * .25;
+  const projectile = document.createElement('span');
+  projectile.className = `move-projectile ${motion.heroId === 'gunslinger' ? 'tracer' : motion.effect === 'siphon-soul' ? 'soul' : ''}`;
+  projectile.setAttribute('aria-hidden','true');
+  projectile.style.cssText = `left:${x}px;top:${y}px;--fx-color:${motion.color};--move-duration:${motion.duration}ms;--travel-x:${bounds.width*.59-x}px;--travel-y:${bounds.height*.26-y}px`;
+  arena.append(projectile);
+}
+async function performAction(action) {
+  // Resolve a copy first so unusable actions never animate or spend a turn.
+  const current = actor(state), next = structuredClone(state), previousEvents = new Set(next.log);
+  const result = act(next, action);
+  if (!result.ok) { notice = result.reason; render(); return; }
+  const move = characterMove(current.id, action);
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  motion = { ...move, duration: reduced ? 120 : move.duration, heroId: current.id, action };
+  busy = true; notice = ''; render(); launchProjectile(); tone();
+  try {
+    await animationDelay(motion.duration * .55);
+    if (result.damage > 0) {
+      const hud = app.querySelector('.enemy-hud');
+      hud.classList.add('contact'); floatingNumber(hud, result.damage);
+      hud.querySelector('.enemy-meter > span').style.width = `${next.enemy.hp / next.enemy.maxHp * 100}%`;
+      hud.querySelector('.enemy-numbers > span:last-child').innerHTML = `${next.enemy.hp} <em>/ ${next.enemy.maxHp}</em>`;
+    }
+    for (const hero of next.party) {
+      const previous = state.party.find(p => p.id === hero.id);
+      if (hero.hp > previous.hp) {
+        const target = app.querySelector(`[data-hero="${hero.id}"]`);
+        target.classList.add('receiving-heal'); floatingNumber(target, hero.hp - previous.hp, true);
+      }
+    }
+    await animationDelay(motion.duration * .45);
+    const incoming = next.log.filter(entry => entry.type === 'enemy' && !previousEvents.has(entry));
+    // Only this action's enemy turn can produce incoming damage.
+    if (next.round !== state.round || next.status === 'defeat') {
+      const strikes = incoming.map(entry => entry.text.match(/: (\w+) takes (\d+) damage\./)).filter(Boolean);
+      if (strikes.length) {
+        app.querySelector('.arena').dataset.phase = 'enemy';
+        app.querySelector('.performing')?.classList.remove('performing');
+        for (const [,name,damage] of strikes.slice(-state.party.filter(p => p.hp > 0).length)) {
+          const cls = CLASSES.find(c => c.name === name), target = cls && app.querySelector(`[data-hero="${cls.id}"]`);
+          if (target) { target.classList.add('taking-hit'); floatingNumber(target, damage); }
+        }
+        await animationDelay(reduced ? 80 : 440);
+      }
+    }
+    state = next; persist();
+  } finally { busy = false; motion = null; render(); }
+}
 async function handle(action, element) {
   if (busy) return;
   if (['attack','skill','guard','potion'].includes(action)) {
-    const result = act(state, action); if (!result.ok) { notice = result.reason; render(); return; }
-    tone(); busy = true; notice = ''; persist(); render();
-    setTimeout(() => { busy = false; render(); }, 300); return;
+    await performAction(action); return;
   }
   switch(action) {
     case 'begin': startEncounter(state); tone(); persist(); render(); break;

@@ -24,6 +24,8 @@ Choose **Manage party** to select three unique heroes, then **Begin encounter**.
 
 Knight weakens attacks; Warrior and Gunslinger deal heavy damage; Paladin heals the most wounded living ally; Sorcerer applies burning; Witch drains health; Monk heals the party. The Codex explains the rules in-game. Sound effects are optional and enabled with the sound button.
 
+Every class has three distinct combat animations: an attack, a defensive move, and a class ability. Actions finish before the next turn starts. Impacts, projectiles, defensive wards, healing, and enemy reactions provide visual feedback. Your browser's reduced-motion preference is respected.
+
 Progress saves automatically in browser local storage. **New expedition** resets the run after confirmation. Clearing browser storage removes saved progress.
 
 ## Validate and build
@@ -36,4 +38,4 @@ npm run build
 
 The unit suite exercises combat, skills, turn order, healing, defeat, progression, and save validation. The browser suite starts its own server on port 3101 and verifies party selection, a full winning expedition, saved-game reloads, and desktop/mobile layouts. It uses system Chromium when installed; otherwise install Playwright Chromium with `npx playwright install chromium`. Set `CHROMIUM_PATH` for a custom executable.
 
-`npm run build` writes the standalone static app to `dist/`. Serve that folder with any static web server. This is a single-player prototype: three encounters, no multiplayer or account backend.
+`npm run build` writes the static app to `dist/` and regenerates the self-contained `play.html` at the repository root and inside `dist/`. Rebuild before distributing a new ZIP so the downloadable game includes the latest code and embedded assets. Serve `dist/` with any static web server. This is a single-player prototype: three encounters, no multiplayer or account backend.

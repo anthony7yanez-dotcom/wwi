@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { setTimeout as delay } from 'node:timers/promises';
 
 const server = spawn(process.execPath, ['server.mjs'], { cwd: new URL('../', import.meta.url), env: { ...process.env, PORT: '3101' }, stdio: ['ignore','pipe','pipe'] });
 let browser;
@@ -43,7 +42,7 @@ try {
   await page.locator('[data-action="begin"]').click();
   await page.evaluate(() => { Math.random = () => 0; });
   await page.keyboard.press('2');
-  await delay(360);
+  await page.locator('.arena[data-resolving="false"]').waitFor();
   let saved = await page.evaluate(() => JSON.parse(localStorage.getItem('the-hollow-save-v1')));
   assert.equal(saved.enemy.hp,160);
   await page.reload();
@@ -64,7 +63,7 @@ try {
     const wounded = saved.party.some(p => p.hp > 0 && p.hp < ({knight:125,sorcerer:80,paladin:110}[p.id] - 25));
     const action = active.mp >= costs[active.id] && (active.id !== 'paladin' || wounded) ? 'skill' : 'attack';
     await page.locator(`.command[data-action="${action}"]`).click();
-    await delay(320);
+    await page.locator('.arena[data-resolving="false"]').waitFor();
   }
   assert.equal(saved.status,'complete'); assert.equal(saved.gold,395);
   assert.match(await page.locator('.arena-message').innerText(),/Dawn will come again/);
