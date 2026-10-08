@@ -46,3 +46,4 @@
 .battle-enemy.enemy-warden[data-move=heavy]{filter:drop-shadow(-8px 3px 15px #58c4d290)}
 .battle-enemy[data-move=death]{filter:drop-shadow(0 0 10px #b9474960)}
 @media(prefers-reduced-motion:reduce){.battle-enemy.enemy-hit{animation:none}}
+.battle-enemy.fallen{animation:none;opacity:0;pointer-events:none}
