@@ -12,5 +12,5 @@ export function partyMembers(game){return game.hero?[game.hero,...(game.companio
 export function activeParty(game){const members=partyMembers(game);return game.activeIds?game.activeIds.map(id=>members.find(h=>h.id===id)).filter(Boolean):members.slice(0,1);}
 export function memberName(game,member){return member.id===game.hero.id?game.name:COMPANIONS.find(c=>c.id===member.id)?.name||member.id;}
 export function hasClass(game,id){return partyMembers(game).some(h=>h.id===id);}
-export function availableCompanions(world,game){return COMPANIONS.filter(c=>c.map===world.map&&!hasClass(game,c.id)&&c.unlock(world));}
+export function availableCompanions(world,game){return world.chapter?[]:COMPANIONS.filter(c=>c.map===world.map&&!hasClass(game,c.id)&&c.unlock(world));}
 export function companionObjects(world,game){return availableCompanions(world,game).map(c=>({id:`companion-${c.id}`,name:c.name,kind:'companion',classId:c.id,x:c.x,y:c.y}));}

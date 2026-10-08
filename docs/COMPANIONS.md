@@ -2,6 +2,10 @@
 
 This is a core gameplay feature approved by the player's Section 16 specification. It replaces the previous single-playable-character restriction for the adventure. The separate combat prototype remains a solo campaign.
 
+## Current chapter pacing
+
+The master world bible supersedes the original demo recruitment timing below for new Chapter I journeys. Aldren, Branna, and Ilyra appear as local NPCs, including the selected-class counterpart. Formal recruitment begins in later chapters. The [character registry](narrative/CHARACTER_REGISTRY.md) defines the reconciled schedule. Old adventures preserve their already recruited party and the demo's recruitment scenes; the table below documents that compatible earlier foundation.
+
 ## Class choice and identity
 
 The introduction fixes the protagonist's class for the journey. Each of the other six established classes has one named companion. The companion matching the protagonist's class never appears as a redundant recruit. No class switching occurs. Original character concepts, lineup artwork, and battle sheets are preserved; directional movement sheets adapt the same armor, clothing, weapons, and colors.

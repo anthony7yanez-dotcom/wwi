@@ -1,3 +1,5 @@
+import { CHAPTER_MAPS, chapterBlockers, chapterObjects, chapterInteract, chapterFinish, chapterObjective, CHAPTER_FINISHES, validChapter, remember } from './chapter.js';
+import { addItem } from './inventory.js';
 import { validSave, heroStats, startEncounter, log, initializeAdventure } from './engine.js';
 import { REGION_ENCOUNTERS } from './encounters.js';
 import { COMPANIONS, companionObjects, hasClass, partyMembers, memberName } from './companions.js';
@@ -61,15 +63,20 @@ MAPS.approach.exits=[MAPS.approach.exit,{edge:'east',label:'Ashen wood',destinat
 MAPS.forest.exits=[MAPS.forest.exit,{edge:'north',label:'Forsaken shrine',destination:'shrine',spawn:{x:480,y:560}}];
 MAPS.shrine.exits=[MAPS.shrine.exit];
 
+Object.assign(MAPS,CHAPTER_MAPS);
+MAPS.shrine.exits.push({edge:'north',label:'Inner sanctuary',destination:'sanctuary',spawn:{x:480,y:560},chapterOnly:true});
+export function mapExits(world){return MAPS[world.map].exits.filter(e=>!e.chapterOnly||world.chapter?.sealOpened);}
+export function enemySpawns(world){return ENEMY_SPAWNS.map(e=>world.chapter&&e.id==='shrine-warden'?{...e,map:'sanctuary'}:e).filter(e=>!world.chapter||e.id!=='shrine-warden'||world.chapter.ritualSeen);}
 export const ENEMY_SPAWNS=[
   {id:'wood-wolf',map:'forest',x:304,y:336,encounter:'ash-wolf'},
   {id:'wood-sentinel',map:'forest',x:480,y:160,encounter:'cult-sentinel'},
   {id:'glade-wolf',map:'forest',x:784,y:352,encounter:'ash-wolf'},
   {id:'shrine-warden',map:'shrine',x:480,y:304,encounter:'root-warden'},
 ];
-export function activeEnemies(world){return ENEMY_SPAWNS.filter(e=>e.map===world.map&&!world.cleared.includes(e.id));}
+export function activeEnemies(world){return enemySpawns(world).filter(e=>e.map===world.map&&!world.cleared.includes(e.id));}
 export function nearbyEnemy(world,radius=32){return activeEnemies(world).find(e=>Math.hypot(e.x-world.x,e.y-world.y)<=radius)||null;}
 export function expeditionInfo(world){
+  if(world.chapter)return chapterObjective(world);
   if(world.flags.shrine)return {title:'A witness in the roots',text:'You defeated the shrine guardian and found signs of a recent ritual. The sacred flame’s origin remains unknown.',complete:true};
   if(world.cleared.includes('shrine-warden'))return {title:'Read the shrine ward',text:'The guardian has fallen. Examine the ancient ward at the north end of the shrine.',complete:false};
   if(world.visited.includes('shrine'))return {title:'The shrine guardian',text:'Face the Rootbound Warden. Watch for Rootquake and use abilities against its stone carapace.',complete:false};
@@ -85,7 +92,7 @@ export const FIELD_NODES=[
  {id:'field-gunslinger',classId:'gunslinger',map:'approach',x:736,y:256,kind:'lever',name:'High chain catch',text:'A broken chain catch sits too high to reach. A precise ricochet could release it.',reward:'The shot catches the iron latch. A courier’s pouch drops within reach. You find a route seal from the missing caravan.',gold:40},
  {id:'field-monk',classId:'monk',map:'forest',x:384,y:416,kind:'ward',name:'Restless pool',text:'Ripples obscure the pool’s reflection. It needs a still, patient touch.',reward:'The water settles, revealing a token from the lost monastery delegation. A moment of silence restores everyone’s focus.',focus:true},
 ];
-export function worldObjects(world,game){return [...MAPS[world.map].objects,...FIELD_NODES.filter(n=>n.map===world.map),...(game?companionObjects(world,game):[])];}
+export function worldObjects(world,game){return [...MAPS[world.map].objects.filter(o=>!world.chapter||o.id!=='shrine-altar'),...FIELD_NODES.filter(n=>n.map===world.map&&(!world.chapter||hasClass(game,n.classId))),...(world.chapter?chapterObjects(world,game):game?companionObjects(world,game):[])];}
 export function createWorld() {
   return {map:'courtyard',x:464,y:368,facing:'south',conversation:null,cleared:[],battle:null,grace:0,flags:{caretaker:false,traveler:false,chest:false,quest:false,gate:false,ward:false,reported:false,forestChest:false,shrine:false,...Object.fromEntries(FIELD_NODES.map(n=>[n.id,false]))},visited:['courtyard']};
 }
@@ -94,15 +101,16 @@ export function canStand(world,x,y) {
   if(!MAPS[world.map]||!Number.isFinite(x)||!Number.isFinite(y))return false;
   if(x<24||x>WORLD_WIDTH-24||y<32||y>WORLD_HEIGHT-24)return false;
   const map=MAPS[world.map];
-  const blockers=[...map.blockers];
+  const blockers=[...map.blockers.filter(b=>!(world.chapter&&world.map==='shrine'&&b.y===32&&b.x===224)),...chapterBlockers(world)];
+  if(world.chapter&&world.map==='shrine')blockers.push({x:224,y:32,w:224,h:64},{x:512,y:32,w:224,h:64});
   // Openings through the edge walls match the two connected road exits.
-  if(x<40&&!map.exits.some(e=>e.edge==='west'&&y>=304&&y<=368))return false;
-  if(x>WORLD_WIDTH-40&&!map.exits.some(e=>e.edge==='east'&&y>=304&&y<=368))return false;
-  if(y<40&&!map.exits.some(e=>e.edge==='north'&&x>=448&&x<=512))return false;
-  if(y>WORLD_HEIGHT-40&&!map.exits.some(e=>e.edge==='south'&&x>=448&&x<=512))return false;
+  if(x<40&&!mapExits(world).some(e=>e.edge==='west'&&y>=304&&y<=368))return false;
+  if(x>WORLD_WIDTH-40&&!mapExits(world).some(e=>e.edge==='east'&&y>=304&&y<=368))return false;
+  if(y<40&&!mapExits(world).some(e=>e.edge==='north'&&x>=448&&x<=512))return false;
+  if(y>WORLD_HEIGHT-40&&!mapExits(world).some(e=>e.edge==='south'&&x>=448&&x<=512))return false;
   if(world.map==='approach'&&!world.flags.gate)blockers.push({x:624,y:224,w:24,h:224});
   if(blockers.some(b=>x+PLAYER_RADIUS>b.x&&x-PLAYER_RADIUS<b.x+b.w&&y+PLAYER_RADIUS>b.y&&y-PLAYER_RADIUS<b.y+b.h))return false;
-  return !map.objects.some(o=>o.kind!=='sign'&&Math.hypot(x-o.x,y-o.y)<PLAYER_RADIUS+(o.kind==='npc'?12:13));
+  return !map.objects.filter(o=>!world.chapter||o.id!=='shrine-altar').some(o=>o.kind!=='sign'&&Math.hypot(x-o.x,y-o.y)<PLAYER_RADIUS+(o.kind==='npc'?12:13));
 }
 
 export function moveWorld(world,dx,dy,seconds,running=false) {
@@ -119,10 +127,10 @@ export function moveWorld(world,dx,dy,seconds,running=false) {
     if(canStand(world,world.x,world.y+stepY/steps))world.y+=stepY/steps;
   }
   world.grace=Math.max(0,world.grace-Math.hypot(world.x-oldX,world.y-oldY));
-  const exit=MAPS[world.map].exits.find(e=>(e.edge==='east'&&world.x>=932&&world.y>=304&&world.y<=368)||(e.edge==='west'&&world.x<=28&&world.y>=304&&world.y<=368)||(e.edge==='north'&&world.y<=36&&world.x>=448&&world.x<=512)||(e.edge==='south'&&world.y>=604&&world.x>=448&&world.x<=512));
+  const exit=mapExits(world).find(e=>(e.edge==='east'&&world.x>=932&&world.y>=304&&world.y<=368)||(e.edge==='west'&&world.x<=28&&world.y>=304&&world.y<=368)||(e.edge==='north'&&world.y<=36&&world.x>=448&&world.x<=512)||(e.edge==='south'&&world.y>=604&&world.x>=448&&world.x<=512));
   if(exit){
     world.map=exit.destination;world.x=exit.spawn.x;world.y=exit.spawn.y;
-    if(!world.visited.includes(world.map))world.visited.push(world.map);world.grace=36;
+    if(!world.visited.includes(world.map))world.visited.push(world.map);world.grace=36;if(world.chapter)world.chapter.phase=chapterObjective(world).phase;
     return {moved:true,transition:true};
   }
   return {moved:world.x!==oldX||world.y!==oldY,transition:false};
@@ -134,6 +142,7 @@ export function nearbyObject(world,game=null) {
 }
 
 export function questInfo(world) {
+  if(world.chapter){const q=chapterObjective(world);return {...q,step:['settlement','wilderness','ruins','sanctuary','return','complete'].indexOf(q.phase)};}
   const f=world.flags;
   if(f.reported)return {title:'A road through the dark',text:'You inspected the silent ward and told the caretaker. The courtyard still has its fire. Your journey will continue beyond the approach.',step:4,complete:true};
   if(f.ward)return {title:'Tell the caretaker',text:'Return to the courtyard and share what you found at the unlit ward.',step:3,complete:false};
@@ -145,6 +154,7 @@ export function questInfo(world) {
 // Dialogue is authored local knowledge, not a revelation of the flame's origin.
 export function interactWorld(world,game) {
   const object=nearbyObject(world,game);if(!object)return null;
+  if(world.chapter){const result=chapterInteract(world,game,object);if(result)return result;}
   const f=world.flags;
   const talk=(speaker,lines,lastLabel='Return',finish=null)=>({id:object.id,speaker,lines,lastLabel,finish});
   if(object.kind==='companion'){
@@ -207,13 +217,16 @@ export function interactWorld(world,game) {
   }
 }
 
-export function finishWorldDialogue(world,finish,game=null) {
-  if(finish==='accept'){world.flags.quest=true;world.flags.caretaker=true;}
+export function finishWorldDialogue(world,finish,game=null,choice=null) {
+  if(world.chapter){const result=chapterFinish(world,game,finish,choice);if(result!==null)return result;}
+
+  if(finish==='accept'){world.flags.quest=true;world.flags.caretaker=true;if(world.chapter&&!world.chapter.wayflames.includes('courtyard'))world.chapter.wayflames.push('courtyard');}
   if(finish==='traveler')world.flags.traveler=true;
   if(finish==='gate')world.flags.gate=true;
   if(finish==='report'&&world.flags.ward){world.flags.quest=true;world.flags.caretaker=true;world.flags.reported=true;}
   if(finish==='rest'&&game){partyMembers(game).forEach(h=>{const stats=heroStats(h);h.hp=stats.hp;h.mp=stats.mp;});game.potions=Math.max(3,game.potions);}
   if(finish?.startsWith('recruit:')&&game){
+    if(world.chapter)return false;
     const id=finish.slice(8),c=COMPANIONS.find(c=>c.id===id);
     if(!c||c.map!==world.map||!c.unlock(world)||hasClass(game,id)||Math.hypot(world.x-c.x,world.y-c.y)>58)return false;
     if(!game.companions)initializeAdventure(game);
@@ -231,7 +244,7 @@ export function finishWorldDialogue(world,finish,game=null) {
 }
 
 export function beginWorldBattle(world,game,spawnId){
-  const spawn=ENEMY_SPAWNS.find(e=>e.id===spawnId);
+  const spawn=enemySpawns(world).find(e=>e.id===spawnId);
   if(!spawn||world.battle||world.conversation||game.status!=='preparing'||spawn.map!==world.map||world.cleared.includes(spawnId)||Math.hypot(spawn.x-world.x,spawn.y-world.y)>58)return false;
   if(!game.companions)initializeAdventure(game);
   const returnTo={map:world.map,x:world.x,y:world.y,facing:world.facing};
@@ -241,14 +254,14 @@ export function beginWorldBattle(world,game,spawnId){
 
 export function finishWorldBattle(world,game,result){
   if(!world.battle)return false;
-  const spawn=ENEMY_SPAWNS.find(e=>e.id===world.battle.spawnId),encounter=REGION_ENCOUNTERS[spawn.encounter];
+  const spawn=enemySpawns(world).find(e=>e.id===world.battle.spawnId),encounter=REGION_ENCOUNTERS[spawn.encounter];
   if(result==='victory'&&game.status!=='victory')return false;
   if(result==='defeat'&&game.status!=='defeat')return false;
   if(result==='retreat'&&game.status!=='battle')return false;
   if(!['victory','defeat','retreat'].includes(result))return false;
   if(result==='victory'){
     if(world.cleared.includes(spawn.id))return false;
-    world.cleared.push(spawn.id);game.xp+=encounter.xp;
+    world.cleared.push(spawn.id);game.xp+=encounter.xp;if(world.chapter&&spawn.id==='shrine-warden'){addItem(game,'ember-glass');remember(world,'warden');}
     const oldLevel=game.hero.level,level=LEVEL_XP.filter(xp=>game.xp>=xp).length;
     partyMembers(game).forEach(h=>{const old=heroStats(h);h.level=level;const stats=heroStats(h);h.hp=Math.min(stats.hp,Math.max(1,h.hp)+(stats.hp-old.hp)+Math.round(stats.hp*.2));h.mp=Math.min(stats.mp,h.mp+(stats.mp-old.mp)+8);});
     log(game,`+${encounter.xp} experience.${level>oldLevel?` Level ${level}!`:''} You catch your breath and recover some health and focus.`,'heal');
@@ -260,7 +273,7 @@ export function finishWorldBattle(world,game,result){
 }
 
 export function validWorld(world) {
-  if(!world||!MAPS[world.map]||!['north','south','east','west'].includes(world.facing)||!world.flags||!Array.isArray(world.visited)||world.visited.length<1||world.visited.length>4||new Set(world.visited).size!==world.visited.length||!world.visited.every(id=>Object.hasOwn(MAPS,id))||!world.visited.includes(world.map))return false;
+  if(!world||!validChapter(world)||!MAPS[world.map]||!['north','south','east','west'].includes(world.facing)||!world.flags||!Array.isArray(world.visited)||world.visited.length<1||world.visited.length>Object.keys(MAPS).length||new Set(world.visited).size!==world.visited.length||!world.visited.every(id=>Object.hasOwn(MAPS,id))||!world.visited.includes(world.map))return false;
   if(!Array.isArray(world.cleared)||new Set(world.cleared).size!==world.cleared.length||!world.cleared.every(id=>ENEMY_SPAWNS.some(e=>e.id===id))||!Number.isFinite(world.grace)||world.grace<0||world.grace>96)return false;
   if(world.flags.shrine&&!world.cleared.includes('shrine-warden'))return false;
   if(!Object.keys(createWorld().flags).every(flag=>typeof world.flags[flag]==='boolean'))return false;
@@ -268,20 +281,22 @@ export function validWorld(world) {
   if(world.flags.ward&&!world.flags.gate)return false;
   if(world.conversation!==null){
     const c=world.conversation;
-    if(!c||!([...MAPS[world.map].objects,...FIELD_NODES.filter(n=>n.map===world.map),...COMPANIONS.filter(n=>n.map===world.map).map(n=>({id:'companion-'+n.id}))].some(o=>o.id===c.id))||typeof c.speaker!=='string'||c.speaker.length>80||!Array.isArray(c.lines)||c.lines.length<1||c.lines.length>5||!c.lines.every(line=>typeof line==='string'&&line.length<=500)||!Number.isInteger(c.page)||c.page<0||c.page>=c.lines.length||typeof c.lastLabel!=='string'||c.lastLabel.length>80||![null,'accept','traveler','gate','report','rest',...COMPANIONS.flatMap(n=>['recruit:'+n.id,'field:'+n.id])].includes(c.finish))return false;
+    if(c?.choices&&(c.finish!=='resolve'||c.id!=='caretaker'||!Array.isArray(c.choices)||c.choices.length!==3||!c.choices.every((item,i)=>item.value===['people','act','try'][i]&&typeof item.label==='string'&&item.label.length<=120)))return false;
+    if(!c||!([...MAPS[world.map].objects,...FIELD_NODES.filter(n=>n.map===world.map),...COMPANIONS.filter(n=>n.map===world.map).map(n=>({id:'companion-'+n.id})),...chapterObjects(world,{companions:[]})].some(o=>o.id===c.id))||typeof c.speaker!=='string'||c.speaker.length>80||!Array.isArray(c.lines)||c.lines.length<1||c.lines.length>5||!c.lines.every(line=>typeof line==='string'&&line.length<=500)||!Number.isInteger(c.page)||c.page<0||c.page>=c.lines.length||typeof c.lastLabel!=='string'||c.lastLabel.length>80||![null,...CHAPTER_FINISHES,'accept','traveler','gate','report','rest',...COMPANIONS.flatMap(n=>['recruit:'+n.id,'field:'+n.id])].includes(c.finish))return false;
   }
   return canStand(world,world.x,world.y);
 }
 
 export function validAdventureSave(save) {
   if(!save||save.version!==2||!validSave(save.game))return false;
-  if(save.game.status==='intro')return save.world===null;
+  if(save.game.status==='intro')return save.world===null&&(save.game.cinematicSeen===undefined||typeof save.game.cinematicSeen==='boolean')&&(save.game.cinematicPage===undefined||Number.isInteger(save.game.cinematicPage)&&save.game.cinematicPage>=0&&save.game.cinematicPage<=3);
   if(save.game.campaign!=='adventure'||!validWorld(save.world))return false;
-  if(save.world.conversation?.finish?.startsWith('recruit:')){const id=save.world.conversation.finish.slice(8),c=COMPANIONS.find(c=>c.id===id);if(hasClass(save.game,id)||c.map!==save.world.map||!c.unlock(save.world)||save.world.conversation.id!=='companion-'+id)return false;}
+  if(save.world.chapter&&(!save.game.chapterEdition||!save.game.inventory||save.world.chapter.technique&&!save.game.inventory.includes('veilglass-mirror')||save.world.chapter.cloak&&!save.game.inventory.includes('mended-cloak')))return false;
+  if(save.world.conversation?.finish?.startsWith('recruit:')){if(save.world.chapter)return false;const id=save.world.conversation.finish.slice(8),c=COMPANIONS.find(c=>c.id===id);if(hasClass(save.game,id)||c.map!==save.world.map||!c.unlock(save.world)||save.world.conversation.id!=='companion-'+id)return false;}
   if(save.world.conversation?.finish?.startsWith('field:')){const id=save.world.conversation.finish.slice(6),n=FIELD_NODES.find(n=>n.classId===id);if(!hasClass(save.game,id)||n.map!==save.world.map||save.world.flags[n.id]||save.world.conversation.id!==n.id)return false;}
   if(save.game.hero.level!==LEVEL_XP.filter(xp=>save.game.xp>=xp).length)return false;
   if(save.game.status==='preparing')return save.world.battle===null;
-  const battle=save.world.battle,spawn=ENEMY_SPAWNS.find(e=>e.id===battle?.spawnId);
+  const battle=save.world.battle,spawn=enemySpawns(save.world).find(e=>e.id===battle?.spawnId);
   if(!spawn||spawn.encounter!==save.game.encounterId||spawn.map!==save.world.map||save.world.cleared.includes(spawn.id)||save.world.conversation)return false;
   const r=battle.returnTo;
   return r&&r.map===spawn.map&&['north','south','east','west'].includes(r.facing)&&canStand({...save.world,map:r.map},r.x,r.y);

@@ -1,5 +1,6 @@
 import { REGION_ENCOUNTERS } from './encounters.js';
 import { activeParty, partyMembers, memberName } from './companions.js';
+import { equipmentBonuses, validInventory } from './inventory.js';
 
 export const CLASSES = [
   { id:'knight', name:'Knight', title:'The oathkeeper', role:'Vanguard', hp:145, mp:28, attack:21, skill:'Shield bash', cost:7, description:'Deal 30 damage and weaken the next enemy strike by 45%.', color:'#91acaf', icon:'shield', story:'You swore an oath when the world still had a sun. The steel remembers, even if you do not.' },
@@ -16,8 +17,8 @@ export const ENCOUNTERS = [
   {name:'Heart of the Hollow',enemy:'The Hollow Mother',title:'The last thing in the dark',hp:220,attack:18,reward:200,intent:'Hollow pulse',description:'The source of the corruption opens its eye. Your journey ends here.',flavor:'You stand where even the old gods feared to tread.'},
 ];
 export function heroStats(hero) {
-  const cls=CLASSES.find(c=>c.id===hero.id);
-  return {...cls,hp:cls.hp+(hero.level-1)*15,mp:cls.mp+(hero.level-1)*4,attack:cls.attack+(hero.level-1)*3,description:cls.description.replace(/\d+/,value=>String(Number(value)+(hero.level-1)*4))};
+  const cls=CLASSES.find(c=>c.id===hero.id),gear=equipmentBonuses(hero);
+  return {...cls,hp:cls.hp+(hero.level-1)*15,mp:cls.mp+(hero.level-1)*4,attack:cls.attack+(hero.level-1)*3+gear.attack,defense:gear.defense,focusRecovery:3+gear.focus,description:cls.description.replace(/\d+/,value=>String(Number(value)+(hero.level-1)*4))};
 }
 export function cleanName(value) { return String(value || 'Wanderer').replace(/[\x00-\x1f\x7f]/g,'').trim().slice(0,24) || 'Wanderer'; }
 export function createGame(classId=null,name='Wanderer') {
@@ -105,7 +106,7 @@ export function act(state,action,rng=Math.random) {
   hero.hp=Math.max(0,hero.hp-result.enemyDamage);state.enemy.weak=false;
   log(state,`${intent.name}: ${cls.name} takes ${result.enemyDamage} damage.`,'enemy');
   if(hero.hp===0) {state.status='defeat';log(state,'Your light fades. The Hollow claims another soul.','enemy');return result;}
-  state.round++;hero.mp=Math.min(cls.mp,hero.mp+3);
+  state.round++;hero.mp=Math.min(cls.mp,hero.mp+cls.focusRecovery);
   return result;
 }
 
@@ -142,10 +143,10 @@ function partyAction(state,action,rng){
   if(!state.enemy.hp){win(state);return result;}
   const living=activeParty(state).filter(h=>h.hp>0),boss=currentEncounter(state).boss;
   const targets=boss&&intent.heavy?living:[living[Math.min(living.length-1,Math.floor(rng()*living.length))]];
-  for(const member of targets){const damage=Math.max(1,Math.round((intent.damage+Math.floor(rng()*3))*(state.enemy.weak?.55:1)*(member.guard?.25:1)));member.hp=Math.max(0,member.hp-damage);result.enemyHits.push({id:member.id,damage});result.enemyDamage+=damage;log(state,`${intent.name}: ${memberName(state,member)} takes ${damage} damage.`,'enemy');}
+  for(const member of targets){const damage=Math.max(1,Math.round((intent.damage+Math.floor(rng()*3))*(state.enemy.weak?.55:1)*(member.guard?.25:1))-heroStats(member).defense);member.hp=Math.max(0,member.hp-damage);result.enemyHits.push({id:member.id,damage});result.enemyDamage+=damage;log(state,`${intent.name}: ${memberName(state,member)} takes ${damage} damage.`,'enemy');}
   state.enemy.weak=false;state.acted=[];
   if(activeParty(state).every(h=>!h.hp)){state.status='defeat';log(state,'The party’s lights fade. The road will have to wait.','enemy');return result;}
-  state.round++;activeParty(state).forEach(h=>{h.guard=false;if(h.hp)h.mp=Math.min(heroStats(h).mp,h.mp+3);});return result;
+  state.round++;activeParty(state).forEach(h=>{h.guard=false;if(h.hp)h.mp=Math.min(heroStats(h).mp,h.mp+heroStats(h).focusRecovery);});return result;
 }
 
 export function descend(state) {
@@ -169,6 +170,7 @@ export function validSave(s) {
     if(!Array.isArray(s.companions)||s.companions.length>6||!Array.isArray(s.activeIds)||s.activeIds.length<1||s.activeIds.length>4||s.activeIds[0]!==h.id||new Set(s.activeIds).size!==s.activeIds.length||!Array.isArray(s.acted)||new Set(s.acted).size!==s.acted.length)return false;
     const roster=partyMembers(s);if(new Set(roster.map(m=>m?.id)).size!==roster.length||!s.activeIds.every(id=>roster.some(m=>m?.id===id))||!s.acted.every(id=>s.activeIds.includes(id)))return false;
     if(!s.companions.every(m=>m&&CLASSES.some(c=>c.id===m.id)&&m.level===h.level&&typeof m.guard==='boolean'&&Number.isFinite(m.hp)&&m.hp>=0&&m.hp<=heroStats(m).hp&&Number.isFinite(m.mp)&&m.mp>=0&&m.mp<=heroStats(m).mp))return false;
+    if(!validInventory(s))return false;
     if(s.status==='preparing'&&s.acted.length)return false;
     if(s.status!=='preparing'&&(!Number.isInteger(s.battleSize)||s.battleSize!==s.activeIds.length))return false;
   }

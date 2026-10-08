@@ -1,42 +1,40 @@
-# The Hollow — A Fire Worth Keeping
+# The Hollow — Chapter I: Glimmer of Hope
 
-A dark fantasy RPG with four connected exploration areas, staged companion recruitment, party-based turn-based battles, and directional walking/running animations.
+A dark fantasy, turn-based RPG set in Nhalis. An ordinary courtyard resident chooses to investigate failing sacred wards and bring a small light home.
 
 ## Download and play
 
-[Download the game ZIP](https://github.com/anthony7yanez-dotcom/wwi/archive/refs/heads/main.zip), extract it, and open **wwi-main/play.html** in a browser. Open the HTML after extracting the ZIP. This standalone file embeds the game, artwork, animations and fonts; no installation or internet connection is required. Saving uses browser-local storage when available.
+[Download the game ZIP](https://github.com/anthony7yanez-dotcom/wwi/archive/refs/heads/main.zip), **extract it**, then open **wwi-main/play.html** in your browser. Open the HTML after extracting the ZIP; clicking the ZIP does not launch the game. The standalone file contains the game, artwork, animations, and fonts. No installation or connection is needed to play.
 
-## Explore and recruit
+Older saves keep their existing adventure and recruited companions. To experience the new opening and Chapter I, start **New adventure**. Export a save through the new System menu before replacing progress you want to retain.
 
-Name your wanderer and choose one of seven classes in the introduction. Your class stays fixed. Each unchosen class has a named companion who joins through a story event; the complete party is not available immediately.
+## Chapter I
 
-The **Ember Courtyard** connects to the **Ruined Approach**, **Ashen Wood** and **Forsaken Shrine**. Speak to the caretaker, raise the gate, inspect the silent ward and report your findings. Continue east into the wood and follow its northern road to the shrine. Visible enemies begin battles on contact. The shrine guardian protects evidence of a recent ritual; the sacred flame's larger mystery remains unresolved.
+Watch or skip the opening, name your character, and choose one of the seven established classes. Your class stays fixed. Explore the Ember Courtyard, your home, and Harker's supply house. Listen to neighbors, inspect the silent ward, and choose why you will act. Follow the connected road through the Ashen Wood to the Forsaken Shrine. Investigate the mechanisms, discover a class-independent exploration relic, enter the inner sanctuary, confront the ritual, and return home after restoring its local light.
 
-Use **WASD / arrows** to walk, **Shift** to run, and **E / Enter** to interact. Touch controls include a direction pad, Run toggle and Interact. Dialogue pauses movement and saves your page; Escape closes it. Each class has 32 drawn movement poses: four walking steps and four running steps in each of four directions. Active companions follow your path with their own movement sheets. Reduced motion uses static directional poses.
+Chapter I is complete when the caretaker recognizes your return. The First Fire's greater crisis remains. Chapters II–VI are documented for development and are not playable yet. Companions are introduced as local people in new Chapter I journeys; formal recruitment belongs to later chapters. Existing companion identities and artwork are preserved.
 
-The **Party** menu shows names, histories, motivations, roles and field abilities. Four characters can travel and fight, including the protagonist. Recruited reserves still supply exploration abilities and gain experience. Look for class ability interactions: split roots, brace an arch, read a veiled inscription, speak to listening roots, kindle a brazier, release a high chain catch, or still a pool. These reveal one-time rewards and personal story leads.
+**WASD / arrows** walk, **Shift** runs, **E / Enter** interacts, and **P / Escape** opens management outside dialogue. Touch controls provide movement, Run, and Interact. Dialogue pauses movement and saves its page. Each class has four walking and four running poses for every direction, plus distinct attack, guard, and ability animations. Reduced motion follows your device setting.
 
-Recruitment and role details are in [the companion system](docs/COMPANIONS.md). The [project vision](docs/PROJECT_VISION.md) remains the source of story direction. Extended personal quest arcs, equipment/relic systems, additional abilities and further regions are future work.
+The management menu includes Party, Character, Equipment, Relics, Inventory, Abilities, Journal, Lore Codex, Map, and System. Equipment changes affect actual attack, defense, or focus recovery. Discovered Wayflames provide fast travel. Lore entries retain their sources and appear through discoveries. System supports save/load, JSON save export/import, and optional original synthesized ambient music.
 
-## Fight together
+## Combat and party foundation
 
-Command each living ally once per round; the enemy responds after the party. Use **1–4** for attack, ability, guard and potion. **R** retreats to the road.
+Visible enemies trigger animated battles on contact. Use **1–4** for attack, ability, guard, and potion; **R** retreats. Watch the telegraphed enemy move. Guard reduces incoming damage by 75% and restores health and focus. The Warden's stone shell resists basic attacks; its heavy Rootquake reaches all active allies, and its rhythm changes when wounded.
 
-Knight weakens enemy strikes; Warrior and Gunslinger deliver heavy direct damage; Sorcerer applies a two-round burn; Witch drains health; Paladin heals the weakest ally while attacking; Monk heals self and restores 3 focus to every ally. Abilities grow with levels. Guard reduces incoming damage by 75%, recovers 8 health and 5 focus. Living members recover 3 focus after the enemy phase. Shared potions heal or revive the weakest ally by up to 50 health.
+The party engine supports four active combatants, unique class companions, reserves, independent health/focus/equipment, shared progression, and reserve exploration abilities. Command each living active member before the enemy responds. Knight weakens strikes, Sorcerer burns, Paladin heals allies, Witch drains health, Monk restores party focus, and Warrior/Gunslinger deal direct damage. Older recruited parties remain functional. New Chapter I can be completed by every class without recruits or grinding.
 
-Watch the enemy intent. The Rootbound Warden's **Rootquake hits every living party member**; coordinate guards. Its stone carapace resists basic attacks, and it attacks heavily more often when wounded. Enemy stats scale with active party size. Companions cannot be swapped during an encounter.
+Victory permanently clears an encounter and grants gold, experience, and recovery. Defeat returns you to the courtyard; the enemy remains. Rest at a hearth to recover the roster and replenish at least three potions. Exploration has no countdown to apocalypse.
 
-Victory clears the map enemy permanently and grants gold, shared experience and a little recovery. Defeat returns the party to the courtyard fire; the enemy remains. Rest at the fire to restore the whole roster and replenish at least three potions. Exploration never advances an apocalypse timer.
+## Saves and prototype
 
-## Saving and the original prototype
+Adventure progress uses `the-hollow-adventure-v2`. It persists class, roster, equipment, supplies, position, dialogue pages, battle commands, quests, puzzle state, discovered lore, Wayflames, restored light, and chapter completion. Version 1 exploration saves migrate without losing their data. Browser-local saving depends on storage being available; use System → Download save file for a portable backup.
 
-Adventure progress uses `the-hollow-adventure-v2`, including recruitment, active/reserve composition, resources, partial battle rounds, discoveries, defeated enemies, position and unfinished dialogue. Existing `the-hollow-adventure-v1` saves migrate automatically; their old data remains intact. New adventure asks before replacing the current save.
+The **Combat prototype** preserves the original three-battle solo campaign and separate `the-hollow-solo-v2` save. Open it from the intro/sidebar or `?mode=prototype`. Switching modes preserves both journeys.
 
-**Combat prototype** retains the original three-encounter solo campaign, seven class animations and separate `the-hollow-solo-v2` save. Open it from the intro/sidebar or with `?mode=prototype`. Switching modes preserves both journeys. Older party saves remain untouched.
+## Develop and verify
 
-## Develop
-
-Requires Node.js 22+. Runtime gameplay has no services, accounts or credentials. All assets are local.
+Requires Node.js 22+. The runtime needs no services, accounts, or credentials. All assets are local.
 
 ```sh
 cd /workspace/wwi
@@ -44,7 +42,7 @@ npm ci --cache /workspace/.npm-cache
 npm run dev
 ```
 
-The server uses port 3000; `PORT` can select another port.
+The server defaults to port 3000. `PORT` selects another port.
 
 ```sh
 npm test
@@ -52,10 +50,19 @@ npm run build
 npm run test:browser
 ```
 
-Unit tests cover solo combat and campaigns, movement/collisions, all seven starting classes' recruitment coverage, party turns, coordinated defense, healing/revival, reserve exploration abilities, rewards/recovery and save migration. Browser tests exercise actual movement, dialogue and recruitment, all 224 directional poses, class battle animations, enemy contact transitions, saved partial rounds, boss defense, desktop and 390px/320px layouts, and embedded offline gameplay without external requests.
+Unit coverage includes all seven classes completing Chapter I alone, equipment effects, puzzle gates, story consistency, public lore boundaries, earlier campaigns, party tactics, movement, and save compatibility. Browser coverage exercises the introduction, characters and interiors, all 224 movement poses, battle animations, visible encounters, partial-round saves, shrine passage, ending, all ten menu tabs, gear, shop, Wayflames, portable saves, sound, and 390px/320px layouts.
 
-Browser checks use installed system Chromium or `CHROMIUM_PATH`. Install a browser with `npx playwright install chromium` if needed. Managed Chromium may block `file://`; direct launch then reports a skip while the same self-contained HTML is tested through an intercepted local document route.
+Browser checks use system Chromium or `CHROMIUM_PATH`. Install Chromium through Playwright if needed. Managed Chromium blocks local file URLs; that check reports a skip. Tests load the same standalone HTML through the local server and verify its assets/gameplay require no additional network requests.
 
-The esbuild build refreshes **play.html** at the repository root and in `dist/`. Each unique asset becomes a short blob URL, avoiding Chromium limits on CSS variables. Build before distributing changes. `dist/` also contains the static source/asset tree for hosting.
+The build refreshes root **play.html** and `dist/play.html`; build before distribution. `dist/` also contains the static source and asset tree. Developer narrative documents are excluded from both player builds. Original artwork and sheets remain in `public/assets/`; adaptations and additional interiors complement them.
 
-Original artwork and battle sheets are preserved in `public/assets/`; generated adaptations matching the supplied reference include the directional sheets in `public/assets/overworld/` and region/enemy art in `public/assets/world/`. Font licenses are in `public/fonts/`.
+## Developer narrative references
+
+These documents contain future story planning and spoilers; they are separate from the in-game codex.
+
+- [Central lore bible](docs/narrative/LORE_BIBLE.md): public belief, objective history, faction knowledge, and reveal limits.
+- [Character registry](docs/narrative/CHARACTER_REGISTRY.md): retained identities, proposed-name reconciliation, recruitment chapters, relationships, and knowledge boundaries.
+- [Narrative dependencies](docs/narrative/NARRATIVE_DEPENDENCIES.md): six-chapter milestones, branching convergence, and Chapter I event conditions.
+- [World and systems architecture](docs/narrative/WORLD_AND_SYSTEMS.md): regional connections, progression, management interface, persistence, and release boundaries.
+- [Chapter I outline](docs/CHAPTER_I.md) and [original brief](docs/narrative/CHAPTER_I_BRIEF.md).
+- [Party foundation](docs/COMPANIONS.md) and [original project vision](docs/PROJECT_VISION.md).
