@@ -1,102 +1,115 @@
 export const CLASSES = [
-  { id: 'knight', name: 'Knight', title: 'The oathkeeper', role: 'Vanguard', hp: 125, mp: 24, attack: 19, speed: 3, skill: 'Shield bash', cost: 6, description: 'Strike for 26 damage and weaken the next enemy attack.', color: '#91acaf', icon: 'shield' },
-  { id: 'warrior', name: 'Warrior', title: 'The bloodbound', role: 'Brute', hp: 115, mp: 24, attack: 24, speed: 4, skill: 'Rending axe', cost: 7, description: 'A brutal strike for 39 damage.', color: '#bf7366', icon: 'axe' },
-  { id: 'paladin', name: 'Paladin', title: 'The last light', role: 'Guardian', hp: 110, mp: 30, attack: 16, speed: 2, skill: 'Sacred light', cost: 8, description: 'Restore 35 health to the most wounded living ally.', color: '#d1b777', icon: 'sun' },
-  { id: 'sorcerer', name: 'Sorcerer', title: 'The veilwalker', role: 'Arcanist', hp: 80, mp: 36, attack: 17, speed: 6, skill: 'Soulfire', cost: 9, description: 'Deal 35 arcane damage. Burns for 8 each round, for 2 rounds.', color: '#68bcc0', icon: 'spark' },
-  { id: 'witch', name: 'Witch', title: 'The hexweaver', role: 'Occultist', hp: 85, mp: 32, attack: 17, speed: 5, skill: 'Siphon soul', cost: 8, description: 'Deal 27 damage and restore 20 health to yourself.', color: '#b383af', icon: 'moon' },
-  { id: 'gunslinger', name: 'Gunslinger', title: 'The deadeye', role: 'Sharpshooter', hp: 90, mp: 28, attack: 22, speed: 7, skill: 'Deadeye shot', cost: 8, description: 'A precise shot for 38 damage.', color: '#c69c75', icon: 'crosshair' },
-  { id: 'monk', name: 'Monk', title: 'The unbroken', role: 'Disciple', hp: 105, mp: 30, attack: 20, speed: 5, skill: 'Inner balance', cost: 8, description: 'Deal 20 damage and restore 14 health to every living ally.', color: '#8fb09d', icon: 'lotus' },
+  { id:'knight', name:'Knight', title:'The oathkeeper', role:'Vanguard', hp:145, mp:28, attack:21, skill:'Shield bash', cost:7, description:'Deal 30 damage and weaken the next enemy strike by 45%.', color:'#91acaf', icon:'shield', story:'You swore an oath when the world still had a sun. The steel remembers, even if you do not.' },
+  { id:'warrior', name:'Warrior', title:'The bloodbound', role:'Brute', hp:140, mp:28, attack:26, skill:'Rending axe', cost:8, description:'Deliver a devastating axe strike for 44 damage.', color:'#bf7366', icon:'axe', story:'The dark took everything you loved. You have come to collect its debt.' },
+  { id:'paladin', name:'Paladin', title:'The last light', role:'Guardian', hp:150, mp:32, attack:19, skill:'Sacred light', cost:9, description:'Deal 24 holy damage and restore 30 of your health.', color:'#d1b777', icon:'sun', story:'The last ember of an ancient faith burns beneath your armor. You will carry it into the dark.' },
+  { id:'sorcerer', name:'Sorcerer', title:'The veilwalker', role:'Arcanist', hp:110, mp:40, attack:20, skill:'Soulfire', cost:10, description:'Deal 36 arcane damage. Burns for 8 damage for two turns.', color:'#68bcc0', icon:'spark', story:'You heard a voice between the worlds. Now you descend to discover whose voice it was.' },
+  { id:'witch', name:'Witch', title:'The hexweaver', role:'Occultist', hp:120, mp:36, attack:19, skill:'Siphon soul', cost:9, description:'Drain 30 health from the enemy and restore 22 of your own.', color:'#b383af', icon:'moon', story:'You know the old names of things that live below. One of them has started whispering yours.' },
+  { id:'gunslinger', name:'Gunslinger', title:'The deadeye', role:'Sharpshooter', hp:125, mp:32, attack:25, skill:'Deadeye shot', cost:9, description:'A perfectly aimed shot deals 42 damage.', color:'#c69c75', icon:'crosshair', story:'One last contract. One last bullet. You have walked away from worse odds. Probably.' },
+  { id:'monk', name:'Monk', title:'The unbroken', role:'Disciple', hp:140, mp:34, attack:23, skill:'Inner balance', cost:9, description:'Deal 28 damage and restore 20 health through inner balance.', color:'#8fb09d', icon:'lotus', story:'Your teacher taught you to listen to silence. Beneath the world, something is breaking it.' },
 ];
-
 export const ENCOUNTERS = [
-  { name: 'The Weeping Cavern', enemy: 'The Watchful Eye', title: 'Keeper of the first gate', hp: 195, attack: 21, reward: 75, description: 'Something ancient stirs beneath the roots. It has already seen you.', intent: 'Gazing strike', flavor: 'Beyond the light, the stone begins to breathe.' },
-  { name: 'The Crimson Crossing', enemy: 'The Rootbound Horror', title: 'The hunger below', hp: 265, attack: 25, reward: 120, description: 'The roots tighten. Every step takes you closer to the heart.', intent: 'Crimson lash', flavor: 'The earth remembers every soul it has swallowed.' },
-  { name: 'Heart of the Hollow', enemy: 'The Hollow Mother', title: 'The last thing in the dark', hp: 350, attack: 29, reward: 200, description: 'The source of the corruption opens its eye. End this nightmare.', intent: 'Hollow pulse', flavor: 'You stand where even the old gods feared to tread.' },
+  {name:'The Weeping Cavern',enemy:'The Watchful Eye',title:'Keeper of the first gate',hp:120,attack:12,reward:75,intent:'Gazing strike',description:'Your footsteps are the only ones. Something beneath the roots has already seen you.',flavor:'Beyond the light, the stone begins to breathe.'},
+  {name:'The Crimson Crossing',enemy:'The Rootbound Horror',title:'The hunger below',hp:170,attack:15,reward:120,intent:'Crimson lash',description:'The roots tighten. Every step takes you closer to the heart.',flavor:'The earth remembers every soul it has swallowed.'},
+  {name:'Heart of the Hollow',enemy:'The Hollow Mother',title:'The last thing in the dark',hp:220,attack:18,reward:200,intent:'Hollow pulse',description:'The source of the corruption opens its eye. Your journey ends here.',flavor:'You stand where even the old gods feared to tread.'},
 ];
-
-export function createGame(ids = ['knight', 'sorcerer', 'paladin']) {
-  if (ids.length !== 3 || new Set(ids).size !== 3 || ids.some(id => !CLASSES.some(c => c.id === id))) throw new Error('Choose three unique heroes.');
-  return { version: 1, status: 'preparing', depth: 0, round: 1, gold: 0, potions: 3, party: ids.map(id => { const c = CLASSES.find(c => c.id === id); return { id, hp: c.hp, mp: c.mp, guard: false }; }), enemy: null, queue: [], cursor: 0, log: [{ text: 'Your party gathers at the edge of the Hollow.', type: 'story' }] };
+export function heroStats(hero) {
+  const cls=CLASSES.find(c=>c.id===hero.id);
+  return {...cls,hp:cls.hp+(hero.level-1)*15,mp:cls.mp+(hero.level-1)*4,attack:cls.attack+(hero.level-1)*3,description:cls.description.replace(/\d+/,value=>String(Number(value)+(hero.level-1)*4))};
 }
-
-export function actor(state) { return state.status === 'battle' ? state.party[state.queue[state.cursor]] : null; }
-export function log(state, text, type = 'normal') { state.log.push({ text, type }); if (state.log.length > 60) state.log.shift(); }
-export function startEncounter(state) {
-  if (!['preparing', 'victory'].includes(state.status) || state.depth >= ENCOUNTERS.length) return false;
-  const encounter = ENCOUNTERS[state.depth];
-  state.enemy = { hp: encounter.hp, maxHp: encounter.hp, burn: 0, weak: false };
-  state.status = 'battle'; state.round = 1; state.cursor = 0;
-  state.party.forEach(p => { p.guard = false; });
-  state.queue = state.party.map((p, i) => i).filter(i => state.party[i].hp > 0).sort((a, b) => CLASSES.find(c => c.id === state.party[b].id).speed - CLASSES.find(c => c.id === state.party[a].id).speed);
-  log(state, `${encounter.enemy} awakens. Your party acts first.`, 'story');
+export function cleanName(value) { return String(value || 'Wanderer').replace(/[\x00-\x1f\x7f]/g,'').trim().slice(0,24) || 'Wanderer'; }
+export function createGame(classId=null,name='Wanderer') {
+  const state={version:2,status:'intro',introStep:'story',selectedClass:null,name:cleanName(name),depth:0,round:1,gold:0,potions:3,hero:null,enemy:null,log:[]};
+  if(classId!==null) {
+    if(!CLASSES.some(c=>c.id===classId)) throw new Error('Choose one of the seven classes.');
+    chooseClass(state,classId);
+  }
+  return state;
+}
+export function chooseClass(state,classId) {
+  const cls=CLASSES.find(c=>c.id===classId);
+  if(state.status!=='intro'||!cls) return false;
+  state.hero={id:classId,level:1,hp:cls.hp,mp:cls.mp,guard:false};
+  state.selectedClass=classId; state.status='preparing';state.introStep='done';
+  log(state,`${state.name}, the ${cls.name.toLowerCase()}, stands alone at the mouth of the Hollow.`,'story');
   return true;
 }
-function win(state) {
-  state.gold += ENCOUNTERS[state.depth].reward;
-  log(state, `${ENCOUNTERS[state.depth].enemy} falls. +${ENCOUNTERS[state.depth].reward} gold.`, 'heal');
-  state.status = state.depth === ENCOUNTERS.length - 1 ? 'complete' : 'victory';
+export function actor(state) { return state.status==='battle' && state.hero.hp>0 ? state.hero : null; }
+export function log(state,text,type='normal') { state.log.push({text,type});if(state.log.length>80) state.log.shift(); }
+export function enemyIntent(state) {
+  const e=ENCOUNTERS[state.depth],heavy=state.round%3===0;
+  return {heavy,name:heavy?'Devastating pulse':e.intent,damage:Math.round(e.attack*(heavy?1.6:1)),description:heavy?'A heavy strike is coming. Guard to absorb it.':'The watcher prepares a direct strike.'};
 }
-export function act(state, action, rng = Math.random) {
-  const hero = actor(state); if (!hero || hero.hp <= 0) return { ok: false, reason: 'It is not your turn.' };
-  const cls = CLASSES.find(c => c.id === hero.id);
-  if (!['attack', 'skill', 'guard', 'potion'].includes(action)) return { ok: false, reason: 'Unknown action.' };
-  if (action === 'skill' && hero.mp < cls.cost) return { ok: false, reason: 'Not enough focus.' };
-  if (action === 'potion' && (state.potions <= 0 || hero.hp === cls.hp)) return { ok: false, reason: state.potions <= 0 ? 'No potions left.' : 'Health is already full.' };
-  let damage = 0; hero.guard = false;
-  if (action === 'attack') { damage = cls.attack + Math.floor(rng() * 5); log(state, `${cls.name} attacks for ${damage} damage.`, 'damage'); }
-  if (action === 'guard') { hero.guard = true; hero.mp = Math.min(cls.mp, hero.mp + 5); log(state, `${cls.name} braces. Incoming damage reduced by 65%; +5 focus.`, 'normal'); }
-  if (action === 'potion') { state.potions--; const healed = Math.min(45, cls.hp - hero.hp); hero.hp += healed; log(state, `${cls.name} drinks a potion. +${healed} health.`, 'heal'); }
-  if (action === 'skill') {
-    hero.mp -= cls.cost;
-    switch (hero.id) {
-      case 'knight': damage = 26; state.enemy.weak = true; break;
-      case 'warrior': damage = 39; break;
-      case 'paladin': {
-        const target = state.party.filter(p => p.hp > 0).sort((a, b) => a.hp / CLASSES.find(c => c.id === a.id).hp - b.hp / CLASSES.find(c => c.id === b.id).hp)[0];
-        const max = CLASSES.find(c => c.id === target.id).hp; const healed = Math.min(35, max - target.hp); target.hp += healed;
-        log(state, `Sacred light restores ${healed} health to ${CLASSES.find(c => c.id === target.id).name}.`, 'heal'); break;
-      }
-      case 'sorcerer': damage = 35; state.enemy.burn = 2; break;
-      case 'witch': damage = 27; hero.hp = Math.min(cls.hp, hero.hp + 20); break;
-      case 'gunslinger': damage = 38; break;
-      case 'monk': damage = 20; state.party.filter(p => p.hp > 0).forEach(p => { p.hp = Math.min(CLASSES.find(c => c.id === p.id).hp, p.hp + 14); }); break;
+export function startEncounter(state) {
+  if(state.status!=='preparing'||!state.hero) return false;
+  const e=ENCOUNTERS[state.depth]; state.enemy={hp:e.hp,maxHp:e.hp,burn:0,weak:false};
+  state.status='battle';state.round=1;state.hero.guard=false;
+  log(state,`${e.enemy} awakens. You act first.`,'story');return true;
+}
+function win(state) {
+  const e=ENCOUNTERS[state.depth];state.gold+=e.reward;
+  state.status=state.depth===2?'complete':'victory';
+  log(state,`${e.enemy} falls. +${e.reward} gold.`,'heal');
+}
+export function act(state,action,rng=Math.random) {
+  const hero=actor(state);
+  if(!hero) return {ok:false,reason:'It is not your turn.'};
+  const cls=heroStats(hero);
+  if(!['attack','skill','guard','potion'].includes(action)) return {ok:false,reason:'Unknown action.'};
+  if(action==='skill'&&hero.mp<cls.cost) return {ok:false,reason:'Not enough focus.'};
+  if(action==='potion'&&(state.potions===0||hero.hp===cls.hp)) return {ok:false,reason:state.potions===0?'No potions left.':'Health is already full.'};
+  const result={ok:true,damage:0,healed:0,burnDamage:0,enemyDamage:0,heavy:state.round%3===0};
+  const heal=amount=>{const restored=Math.min(amount,cls.hp-hero.hp);hero.hp+=restored;result.healed+=restored;};
+  hero.guard=false;
+  if(action==='attack') { result.damage=cls.attack+Math.floor(rng()*5);log(state,`${cls.name} attacks for ${result.damage} damage.`,'damage'); }
+  if(action==='guard') {hero.guard=true;hero.mp=Math.min(cls.mp,hero.mp+5);heal(8);log(state,'You brace: 75% less damage, +5 focus, and +8 health.');}
+  if(action==='potion') {state.potions--;heal(50);log(state,`You drink a potion. +${result.healed} health.`,'heal');}
+  if(action==='skill') {
+    hero.mp-=cls.cost;
+    const growth=(hero.level-1)*4;
+    switch(hero.id) {
+      case 'knight':result.damage=30+growth;state.enemy.weak=true;break;
+      case 'warrior':result.damage=44+growth;break;
+      case 'paladin':result.damage=24+growth;heal(30);break;
+      case 'sorcerer':result.damage=36+growth;state.enemy.burn=2;break;
+      case 'witch':result.damage=30+growth;heal(22);break;
+      case 'gunslinger':result.damage=42+growth;break;
+      case 'monk':result.damage=28+growth;heal(20);break;
     }
-    if (damage) log(state, `${cls.name} uses ${cls.skill}. ${damage} damage${hero.id === 'sorcerer' ? ' + burning' : hero.id === 'witch' ? ' + self-healing' : hero.id === 'monk' ? ' + party healing' : ''}.`, 'damage');
+    log(state,`${cls.skill}: ${result.damage} damage${result.healed?`, +${result.healed} health`:''}${hero.id==='sorcerer'?', soul burning':''}.`,'damage');
   }
-  state.enemy.hp = Math.max(0, state.enemy.hp - damage);
-  if (state.enemy.hp === 0) { win(state); return { ok: true, damage }; }
-  state.cursor++;
-  if (state.cursor >= state.queue.length) {
-    if (state.enemy.burn > 0) { state.enemy.hp = Math.max(0, state.enemy.hp - 8); state.enemy.burn--; log(state, 'Soulfire burns for 8 damage.', 'damage'); }
-    if (!state.enemy.hp) { win(state); return { ok: true, damage }; }
-    const living = state.party.filter(p => p.hp > 0);
-    const sweep = state.round % 3 === 0;
-    const targets = sweep ? living : [living[Math.min(living.length - 1, Math.floor(rng() * living.length))]];
-    for (const target of targets) {
-      const hit = Math.max(1, Math.round((ENCOUNTERS[state.depth].attack + Math.floor(rng() * 5)) * (state.enemy.weak ? .65 : 1) * (target.guard ? .35 : 1) * (sweep ? .8 : 1)));
-      target.hp = Math.max(0, target.hp - hit);
-      log(state, `${sweep ? 'The cavern trembles' : ENCOUNTERS[state.depth].intent}: ${CLASSES.find(c => c.id === target.id).name} takes ${hit} damage.${target.hp === 0 ? ' Fallen.' : ''}`, 'enemy');
-    }
-    state.enemy.weak = false;
-    if (state.party.every(p => p.hp <= 0)) { state.status = 'defeat'; log(state, 'Your light fades. The Hollow claims another party.', 'enemy'); return { ok: true, damage }; }
-    state.round++; state.cursor = 0;
-    state.queue = state.queue.filter(i => state.party[i].hp > 0);
-    state.party.forEach(p => { p.guard = false; if (p.hp > 0) p.mp = Math.min(CLASSES.find(c => c.id === p.id).mp, p.mp + 2); });
+  state.enemy.hp=Math.max(0,state.enemy.hp-result.damage);
+  if(!state.enemy.hp) {win(state);return result;}
+  if(state.enemy.burn>0) {
+    result.burnDamage=Math.min(8,state.enemy.hp);state.enemy.hp-=result.burnDamage;state.enemy.burn--;
+    log(state,`Soulfire burns for ${result.burnDamage} damage.`,'damage');
   }
-  return { ok: true, damage };
+  if(!state.enemy.hp) {win(state);return result;}
+  const intent=enemyIntent(state);
+  result.enemyDamage=Math.max(1,Math.round((intent.damage+Math.floor(rng()*3))*(state.enemy.weak?.55:1)*(hero.guard?.25:1)));
+  hero.hp=Math.max(0,hero.hp-result.enemyDamage);state.enemy.weak=false;
+  log(state,`${intent.name}: ${cls.name} takes ${result.enemyDamage} damage.`,'enemy');
+  if(hero.hp===0) {state.status='defeat';log(state,'Your light fades. The Hollow claims another soul.','enemy');return result;}
+  state.round++;hero.mp=Math.min(cls.mp,hero.mp+3);
+  return result;
 }
 export function descend(state) {
-  if (state.status !== 'victory') return false;
-  state.depth++;
-  state.party.forEach(p => { const c = CLASSES.find(c => c.id === p.id); p.hp = Math.min(c.hp, Math.max(p.hp, Math.ceil(c.hp * .3)) + 25); p.mp = c.mp; });
-  state.potions++; log(state, 'A quiet refuge. Each hero recovers health and focus. +1 potion.', 'heal');
+  if(state.status!=='victory') return false;
+  state.depth++;state.hero.level++;
+  const stats=heroStats(state.hero);state.hero.hp=stats.hp;state.hero.mp=stats.mp;state.hero.guard=false;
+  state.potions++;state.status='preparing';
+  log(state,`You reach a quiet refuge. Level ${state.hero.level}: restored health and focus, stronger attacks, +1 potion.`,'heal');
   return startEncounter(state);
 }
 export function validSave(s) {
-  if (!s || s.version !== 1 || !['preparing','battle','victory','complete','defeat'].includes(s.status) || !Number.isInteger(s.depth) || s.depth < 0 || s.depth > 2 || !Number.isInteger(s.round) || s.round < 1 || !Number.isInteger(s.gold) || s.gold < 0 || !Number.isInteger(s.potions) || s.potions < 0) return false;
-  if (!Array.isArray(s.party) || s.party.length !== 3 || new Set(s.party.map(p => p.id)).size !== 3 || !s.party.every(p => { const c = CLASSES.find(c => c.id === p.id); return c && Number.isFinite(p.hp) && p.hp >= 0 && p.hp <= c.hp && Number.isFinite(p.mp) && p.mp >= 0 && p.mp <= c.mp && typeof p.guard === 'boolean'; })) return false;
-  if (!Array.isArray(s.log) || !s.log.every(l => typeof l.text === 'string' && typeof l.type === 'string') || !Array.isArray(s.queue) || new Set(s.queue).size !== s.queue.length || !s.queue.every(i => Number.isInteger(i) && i >= 0 && i <= 2) || !Number.isInteger(s.cursor) || s.cursor < 0) return false;
-  if (s.status !== 'preparing' && (!s.enemy || !Number.isFinite(s.enemy.hp) || s.enemy.hp < 0 || s.enemy.maxHp !== ENCOUNTERS[s.depth].hp || s.enemy.hp > s.enemy.maxHp || !Number.isInteger(s.enemy.burn) || s.enemy.burn < 0 || s.enemy.burn > 2 || typeof s.enemy.weak !== 'boolean')) return false;
-  if (s.status === 'battle' && (!s.enemy.hp || s.cursor >= s.queue.length || s.queue.some(i => s.party[i].hp <= 0))) return false;
-  return true;
+  if(!s||s.version!==2||!['intro','preparing','battle','victory','complete','defeat'].includes(s.status)||typeof s.name!=='string'||s.name!==cleanName(s.name)||!Number.isInteger(s.depth)||s.depth<0||s.depth>2||!Number.isInteger(s.round)||s.round<1||!Number.isInteger(s.gold)||s.gold<0||!Number.isInteger(s.potions)||s.potions<0||!Array.isArray(s.log)||s.log.length>80||!s.log.every(l=>typeof l.text==='string'&&typeof l.type==='string')) return false;
+  if(s.status==='intro') return s.hero===null&&s.enemy===null&&s.depth===0&&['story','class'].includes(s.introStep)&&(s.selectedClass===null||CLASSES.some(c=>c.id===s.selectedClass));
+  const h=s.hero;
+  if(!h||!CLASSES.some(c=>c.id===h.id)||h.id!==s.selectedClass||h.level!==s.depth+1||typeof h.guard!=='boolean') return false;
+  const stats=heroStats(h);
+  if(!Number.isFinite(h.hp)||h.hp<0||h.hp>stats.hp||!Number.isFinite(h.mp)||h.mp<0||h.mp>stats.mp) return false;
+  if(s.status==='preparing') return s.enemy===null&&h.hp>0;
+  if(!s.enemy||!Number.isFinite(s.enemy.hp)||s.enemy.hp<0||s.enemy.maxHp!==ENCOUNTERS[s.depth].hp||s.enemy.hp>s.enemy.maxHp||!Number.isInteger(s.enemy.burn)||s.enemy.burn<0||s.enemy.burn>2||typeof s.enemy.weak!=='boolean') return false;
+  if(s.status==='battle') return h.hp>0&&s.enemy.hp>0;
+  if(s.status==='defeat') return h.hp===0&&s.enemy.hp>0;
+  return h.hp>0&&s.enemy.hp===0&&(s.status!=='complete'||s.depth===2);
 }

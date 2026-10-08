@@ -1,14 +1,28 @@
-# The Hollow
+# The Hollow — The Lone Descent
 
-A playable dark fantasy, turn-based browser RPG inspired by the supplied pixel-art reference. Select three of seven heroes and survive three encounters in a corrupted cavern.
+A dark fantasy solo turn-based RPG inspired by the supplied pixel-art reference.
 
-## Play without installing anything
+## Download and play
 
-Download this repository using GitHub's **Code → Download ZIP**, extract the ZIP, then open **play.html** in your browser. This standalone file embeds the game code, artwork, and fonts. No Node.js installation, server, or internet connection is needed to play. Browser-local saving depends on your browser allowing storage for local files.
+On GitHub, choose **Code → Download ZIP**, extract it, and open **play.html** in your browser. This standalone file embeds the game code, artwork, animations, and fonts. No installation, server, or internet connection is needed to play. Browser-local saving depends on your browser permitting local-file storage.
 
-## Run
+## Your journey
 
-Requires Node.js 22 or later. No runtime packages or external services are needed.
+The story begins with an awakening at the mouth of the Hollow. Name your wanderer, then choose one of seven classes during the intro. Preview attack, guard, and ability animations before committing to your calling. You control one hero throughout the campaign; start a new journey to choose a different class.
+
+Knight weakens enemy strikes; Warrior deals heavy axe damage; Paladin attacks and heals; Sorcerer burns enemies; Witch drains health; Gunslinger fires powerful aimed shots; Monk attacks and restores balance. All seven classes can complete the solo campaign.
+
+Each class has a transparent 6-column × 4-row animation sheet containing 24 drawn poses: six idle, six attack, six guard, and six ability frames. Frame playback changes limbs, weapons, clothing, and spell effects. Hero actions finish before the enemy reacts. Reduced-motion settings show a short static action pose instead of cycling frames.
+
+Use buttons or keys **1–4** for attack, class ability, guard, and potion. The enemy responds after each action. Every third strike is heavy; its next move is shown beneath the battlefield. Guard reduces incoming damage by 75%, restores 5 focus, and recovers 8 health. Focus also recovers by 3 after surviving a turn. Potions restore up to 50 health.
+
+Defeat three guardians. At each refuge, your hero gains a level, stronger attacks and abilities, full health and focus, and an additional potion. The Codex and character sheet explain your current abilities and stats.
+
+Solo progress autosaves under `the-hollow-solo-v2`. Older party saves are left untouched under their previous key; the new campaign starts at its own intro. **New journey** asks for confirmation before resetting the solo save.
+
+## Develop
+
+Requires Node.js 22+. Runtime gameplay needs no services or credentials. All assets are local.
 
 ```sh
 cd /workspace/wwi
@@ -16,26 +30,18 @@ npm ci --cache /workspace/.npm-cache
 npm run dev
 ```
 
-The server listens on port 3000. Set `PORT` to use a different port. Art and fonts are served locally; gameplay works without external network access. The generated environment and hero sheet are adaptations of the supplied reference, stored in `public/assets/`. Font licenses are in `public/fonts/`.
-
-## Play
-
-Choose **Manage party** to select three unique heroes, then **Begin encounter**. Heroes act in speed order. Use the action buttons or keys **1–4** for attack, class ability, guard, and potion. The enemy attacks after all living heroes act, and attacks the whole party every third round. Clear an encounter to descend, recover health and focus, revive fallen heroes, and gain a potion. Clear the third encounter to win.
-
-Knight weakens attacks; Warrior and Gunslinger deal heavy damage; Paladin heals the most wounded living ally; Sorcerer applies burning; Witch drains health; Monk heals the party. The Codex explains the rules in-game. Sound effects are optional and enabled with the sound button.
-
-Every class has three distinct combat animations: an attack, a defensive move, and a class ability. Actions finish before the next turn starts. Impacts, projectiles, defensive wards, healing, and enemy reactions provide visual feedback. Your browser's reduced-motion preference is respected.
-
-Progress saves automatically in browser local storage. **New expedition** resets the run after confirmation. Clearing browser storage removes saved progress.
-
-## Validate and build
+The server listens on port 3000. Use `PORT` to choose another port.
 
 ```sh
 npm test
-npm run test:browser
 npm run build
+npm run test:browser
 ```
 
-The unit suite exercises combat, skills, turn order, healing, defeat, progression, and save validation. The browser suite starts its own server on port 3101 and verifies party selection, a full winning expedition, saved-game reloads, and desktop/mobile layouts. It uses system Chromium when installed; otherwise install Playwright Chromium with `npx playwright install chromium`. Set `CHROMIUM_PATH` for a custom executable.
+The unit suite validates solo combat, class selection, healing, enemy telegraphs, defeat, leveling, and saved games. It also completes the campaign with every class across ten seeded runs each. Browser tests validate the actual intro, pose-changing animations for all seven classes, input locking, a complete solo campaign, saves, mobile screens, reduced motion, and the standalone download.
 
-`npm run build` writes the static app to `dist/` and regenerates the self-contained `play.html` at the repository root and inside `dist/`. Rebuild before distributing a new ZIP so the downloadable game includes the latest code and embedded assets. Serve `dist/` with any static web server. This is a single-player prototype: three encounters, no multiplayer or account backend.
+Browser tests use installed system Chromium, or a custom `CHROMIUM_PATH`. If system Chromium is unavailable, install the Playwright browser with `npx playwright install chromium`.
+
+`npm run build` generates `dist/` and refreshes **play.html** at the repository root and in `dist/`. Build before distributing updates so the offline download matches the source. Serve `dist/` with any static web server.
+
+The new animation sheets are generated adaptations of the supplied reference. Original artwork and sheets are in `public/assets/`; font licenses are in `public/fonts/`. The game remains a three-encounter single-player prototype without accounts or multiplayer.

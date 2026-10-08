@@ -1,6 +1,5 @@
-import { CLASSES, ENCOUNTERS, createGame, actor, startEncounter, act, descend, validSave } from './engine.js';
+import { CLASSES, ENCOUNTERS, createGame, chooseClass, cleanName, heroStats, actor, startEncounter, act, descend, enemyIntent, validSave } from './engine.js';
 import { characterMove } from './animations.js';
-
 const paths = {
   sword: '<path d="m14 3 7-1-1 7-11 11-5-5Z"/><path d="m4 13 7 7M3 21l4-4M14 3l6 6"/>',
   shield: '<path d="M12 2 3 6v6c0 6 9 10 9 10s9-4 9-10V6Z"/><path d="M12 6v11M7 11h10"/>',
@@ -28,165 +27,85 @@ const paths = {
 };
 const icon = (name, size = 20) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.spark}</svg>`;
 const esc = value => String(value).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
-const roman = ['I', 'II', 'III'];
-const key = 'the-hollow-save-v1';
-let state = createGame();
-try { const saved = JSON.parse(localStorage.getItem(key)); if (validSave(saved)) state = saved; } catch { /* A fresh expedition is safe if local storage is unavailable. */ }
-let sound = false, busy = false, panel = 'log', modal = null, selection = [], notice = '', storageWarning = false;
-let audio, motion = null;
-const app = document.querySelector('#app');
-function persist() { try { localStorage.setItem(key, JSON.stringify(state)); } catch { storageWarning = true; } }
-function tone() {
-  if (!sound) return;
-  try { audio ||= new AudioContext(); audio.resume(); const osc = audio.createOscillator(), gain = audio.createGain(); osc.type = 'triangle'; osc.frequency.setValueAtTime(220, audio.currentTime); osc.frequency.exponentialRampToValueAtTime(75, audio.currentTime + .2); gain.gain.setValueAtTime(.045, audio.currentTime); gain.gain.exponentialRampToValueAtTime(.001, audio.currentTime + .24); osc.connect(gain); gain.connect(audio.destination); osc.start(); osc.stop(audio.currentTime + .25); } catch { sound = false; }
+const roman=['I','II','III'];
+const key='the-hollow-solo-v2';
+let state=createGame(),sound=false,busy=false,panel='log',modal=null,notice='',storageWarning=false,motion=null,audio;
+try {const saved=JSON.parse(localStorage.getItem(key));if(validSave(saved)) state=saved;} catch {}
+const app=document.querySelector('#app');
+const animationDelay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+function persist(){try{localStorage.setItem(key,JSON.stringify(state));}catch{storageWarning=true;}}
+function tone(){if(!sound)return;try{audio ||= new AudioContext();audio.resume();const osc=audio.createOscillator(),gain=audio.createGain();osc.type='triangle';osc.frequency.setValueAtTime(240,audio.currentTime);osc.frequency.exponentialRampToValueAtTime(85,audio.currentTime+.2);gain.gain.setValueAtTime(.04,audio.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.25);osc.connect(gain);gain.connect(audio.destination);osc.start();osc.stop(audio.currentTime+.26);}catch{sound=false;}}
+function hpBar(value,max,type=''){return `<div class="meter ${type}"><span style="width:${Math.max(0,value/max*100)}%"></span></div>`;}
+function sprite(id,extra=''){return `<div class="frame-sprite sheet-${id} ${extra}" data-sheet="${id}" data-frame="0" data-row="0" role="img" aria-label="${CLASSES.find(c=>c.id===id).name} animated pixel art"></div>`;}
+function header(){return `<header class="topbar"><a class="brand" href="#" aria-label="The Hollow home"><span class="brand-sigil">${icon('spark',29)}</span><span>THE HOLLOW<small>A SOLO TURN-BASED RPG</small></span></a><nav aria-label="Main navigation"><button class="nav-item active" data-action="expedition">${icon('map',17)}<span>Journey</span></button><button class="nav-item" data-action="character" ${!state.hero?'disabled':''}>${icon('people',17)}<span>Character</span></button><button class="nav-item" data-action="codex">${icon('book',17)}<span>Codex</span></button></nav><div class="header-actions"><span class="autosave"><i></i>${storageWarning?'Save unavailable':'Autosave on'}</span><button class="icon-button" data-action="sound" aria-label="${sound?'Mute sound':'Enable sound'}">${icon(sound?'sound':'mute',18)}</button><button class="icon-button fullscreen" data-action="fullscreen" aria-label="Toggle fullscreen">${icon('expand',17)}</button></div></header>`;}
+function renderIntro(){
+ const choosing=state.introStep==='class',preview=CLASSES.find(c=>c.id===(state.selectedClass||'knight'));
+ return `<main class="intro-main"><div class="intro-progress"><span class="${!choosing?'current':''}">01 · THE AWAKENING</span><i></i><span class="${choosing?'current':''}">02 · YOUR CALLING</span></div>${!choosing?`<section class="prologue"><div class="prologue-art"><div class="prologue-eye"></div><span>THE WORLD ABOVE HAS GONE QUIET.</span></div><div class="prologue-story"><div class="eyebrow">A SINGLE SOUL. A LONG WAY DOWN.</div><h1>Every legend<br>begins alone<span>.</span></h1><p>You wake at the mouth of a cavern. Your torch is still burning. Beyond its light, the earth breathes.</p><p>There is no company coming. No one to carry your burden. Only an old voice from the dark, asking a simple question.</p><blockquote>“What name shall I remember?”</blockquote><form id="name-form"><label for="wanderer-name">NAME YOUR WANDERER</label><input id="wanderer-name" name="name" maxlength="24" value="${esc(state.name)}" autocomplete="off" required /><button class="primary-button" type="submit">Discover your calling${icon('arrow',17)}</button></form><small>Your class will be chosen in the next chapter.</small></div></section>`:`<section class="calling-heading"><div><div class="eyebrow">THE SECOND QUESTION</div><h1>Who will you become<span>?</span></h1><p>“${esc(state.name)}. A name worth remembering. Now show me what you carry into the dark.”</p></div><button class="text-button" data-action="intro-back">Change name</button></section><section class="calling-layout"><div class="calling-classes" role="group" aria-label="Choose your class">${CLASSES.map(c=>`<button class="calling-choice ${preview.id===c.id?'chosen':''}" data-action="choose-class" data-class="${c.id}" aria-pressed="${preview.id===c.id}">${icon(c.icon,22)}<span><strong>${c.name}</strong><small>${c.title}</small></span><em>${c.role}</em>${preview.id===c.id?icon('check',16):''}</button>`).join('')}</div><div class="calling-preview" style="--class-color:${preview.color}"><div class="preview-stage" data-resolving="false">${sprite(preview.id,'preview-sprite')}<span class="preview-shadow"></span></div><span class="eyebrow">${preview.role.toUpperCase()} · ${preview.title.toUpperCase()}</span><h2>${preview.name}</h2><p>${preview.story}</p><div class="preview-stats"><span>${icon('heart',14)}<b>${preview.hp}</b> HEALTH</span><span>${icon('spark',14)}<b>${preview.mp}</b> FOCUS</span><span>${icon('sword',14)}<b>${preview.attack}</b> ATTACK</span></div><div class="preview-controls" aria-label="Preview animations"><button data-action="preview" data-move="attack">${icon('sword',15)}Attack</button><button data-action="preview" data-move="guard">${icon('shield',15)}Guard</button><button data-action="preview" data-move="skill">${icon(preview.icon,15)}Ability</button></div><div class="calling-ability"><b>${preview.skill}</b><span>${preview.description}</span></div><button class="primary-button" data-action="accept-class">Walk the path of the ${preview.name}${icon('arrow',17)}</button><small>Your class is chosen for this journey. A new journey lets you choose again.</small></div></section>`}</main>`;
 }
-function sprite(id, className = '') { const index = CLASSES.findIndex(c => c.id === id); const [left,right] = [[20,342],[343,627],[630,931],[934,1198],[1200,1496],[1500,1797],[1801,2073]][index]; return `<div class="sprite ${className}" style="--crop-width:${right-left};--sheet-position:${left/(2073-(right-left))*100}%" role="img" aria-label="${CLASSES[index].name} pixel art"></div>`; }
-function hpBar(value, max, type = '') { return `<div class="meter ${type}"><span style="width:${Math.max(0, value / max * 100)}%"></span></div>`; }
-function moveEffects(heroClass) {
-  return `<div class="move-effects effect-${motion.effect}" aria-hidden="true"><span class="move-arc"></span><span class="move-ring"></span><span class="move-ring second"></span><span class="move-sigil">${icon(motion.action === 'guard' ? 'shield' : heroClass.icon, 100)}</span><span class="move-flash"></span><span class="move-motes">${[0,1,2,3,4].map(n=>`<i style="--particle:${n}"></i>`).join('')}</span></div>`;
+function moveEffects(cls){return `<div class="move-effects effect-${motion.effect}" aria-hidden="true"><span class="move-arc"></span><span class="move-ring"></span><span class="move-ring second"></span><span class="move-sigil">${icon(motion.action==='guard'?'shield':cls.icon,100)}</span><span class="move-flash"></span><span class="move-motes">${[0,1,2,3,4].map(n=>`<i style="--particle:${n}"></i>`).join('')}</span></div>`;}
+function renderJourney(){
+ const e=ENCOUNTERS[state.depth],h=state.hero,c=heroStats(h),playing=state.status==='battle',intent=enemyIntent(state),enemyHp=state.enemy?.hp??e.hp;
+ const move=motion?`--move-duration:${motion.duration}ms;--fx-color:${motion.color}`:`--fx-color:${c.color}`;
+ return `<main><section class="page-heading"><div><div class="eyebrow"><span class="tiny-diamond"></span> THE LONE DESCENT <span class="eyebrow-separator">/</span> ${esc(state.name).toUpperCase()} · LEVEL ${h.level}</div><h1>${e.name}<span class="title-dot">.</span></h1><p>${e.description}</p></div><div class="depth-badge"><span>DEPTH</span><strong>${roman[state.depth]} <em>/ III</em></strong><div class="depth-dots">${roman.map((r,i)=>`<i class="${i<=state.depth?'filled':''}"></i>`).join('')}</div></div></section><div class="game-layout"><section class="battle-column" aria-label="Battlefield"><div class="arena solo-arena depth-${state.depth} ${state.status==='complete'?'cleansed':''}" data-resolving="${busy}" data-phase="${motion?'hero':'idle'}"><div class="arena-shade"></div><div class="arena-top"><span class="location-label">${icon('map',14)} THE HOLLOW <span>/</span> FLOOR 0${state.depth+1}</span><span class="encounter-label"><i></i>${playing?'IN COMBAT':state.status==='preparing'?'UNEXPLORED':state.status==='defeat'?'LIGHT EXTINGUISHED':'AREA CLEARED'}</span></div><div class="enemy-hud"><div class="enemy-heading"><span class="enemy-icon">${icon('crosshair',17)}</span><div><strong>${e.enemy}</strong><small>${e.title}</small></div><span class="level-badge">LV. ${state.depth+3}</span></div>${hpBar(enemyHp,e.hp,'enemy-meter')}<div class="enemy-numbers"><span>${state.enemy?.burn?`${icon('fire',12)} BURNING · ${state.enemy.burn} TURNS`:'ELITE CREATURE'}</span><span>${enemyHp}<em> / ${e.hp}</em></span></div></div><div class="stage-party solo-stage"><div class="stage-hero ${h.hp===0?'fallen':''} ${playing?'stage-active':''} ${h.guard?'guarding':''} ${motion?'performing':''}" data-hero="${h.id}" data-move="${motion?.action||'idle'}" style="${move}">${sprite(h.id,'battle-sprite')}<span class="hero-shadow"></span><span class="guard-ward" aria-hidden="true">${icon('shield',100)}</span>${motion?moveEffects(c):''}<div class="stage-name">${motion?motion.label:esc(state.name)}${h.guard?icon('shield',12):''}</div></div></div>${!playing?`<div class="arena-message"><span>${state.status==='preparing'?'YOU WALK THIS PATH ALONE':state.status==='defeat'?'THE LIGHT HAS FADED':state.status==='complete'?'THE HOLLOW IS SILENT':'A QUIET REFUGE'}</span><h2>${state.status==='preparing'?'Into the unknown.':state.status==='defeat'?'Darkness prevails.':state.status==='complete'?'Your legend begins.':'You are stronger now.'}</h2><button class="primary-button" data-action="${state.status==='preparing'?'begin':state.status==='victory'?'descend':'restart'}">${state.status==='preparing'?'Begin encounter':state.status==='victory'?'Rest & descend':'New journey'}${icon('arrow',17)}</button></div>`:''}<div class="arena-bottom"><span>${icon('fire',14)} ${playing?`ROUND ${String(state.round).padStart(2,'0')}`:'THE TORCH IS LIT'}</span><span>${playing?'Your move. The watcher waits.':e.flavor}</span><span class="arena-corner">${icon('expand',14)}</span></div></div><div class="turn-strip"><span class="eyebrow">NEXT ENEMY MOVE</span><span class="turn-token enemy-token ${intent.heavy?'heavy-intent':''}">${icon(intent.heavy?'fire':'crosshair',15)}${intent.name}</span><span class="intent-description">${intent.heavy?'Heavy attack · consider guarding':`About ${intent.damage} damage`}</span><span class="round-number">${playing?`Round ${state.round}`:'You act first'}</span></div><div class="party-section-heading"><h3>Your character <span>ONE SOUL · LEVEL ${h.level}</span></h3><button class="text-button" data-action="character">Character sheet${icon('book',15)}</button></div><div class="solo-character-strip"><article class="hero-card ${playing?'selected':''} ${h.hp===0?'dead':''}" style="--class-color:${c.color}"><div class="hero-portrait">${sprite(h.id)}</div><div class="hero-details"><div class="hero-card-heading"><h3>${esc(state.name)}</h3><span>${c.name.toUpperCase()} · ${c.role.toUpperCase()}</span></div><div class="stat-row"><span>${icon('heart',11)} HP</span><b>${h.hp}<em> / ${c.hp}</em></b></div>${hpBar(h.hp,c.hp)}<div class="stat-row focus-stat"><span>${icon('spark',11)} FOCUS</span><b>${h.mp}<em> / ${c.mp}</em></b></div>${hpBar(h.mp,c.mp,'focus-meter')}</div></article><div class="solo-ability"><span class="eyebrow">YOUR CALLING</span><h3>${c.skill}</h3><p>${c.description}</p></div><div class="solo-level"><span>LEVEL</span><strong>${h.level}</strong><small>${h.level<3?'Grow stronger at the next refuge':'Your full potential'}</small></div></div></section><aside class="side-column"><section class="quest-card"><div class="eyebrow">${icon('flag',14)} CURRENT OBJECTIVE</div><h2>${state.status==='complete'?'A light in the dark':'Silence the watcher'}</h2><p>${state.status==='complete'?`${esc(state.name)} has ended the corruption. The world will remember.`:'Defeat the guardian and find a way deeper into the Hollow.'}</p><div class="quest-footer"><span>${icon('coin',15)} ${state.status==='complete'?state.gold:e.reward} gold</span><span>${state.status==='complete'?'COMPLETED':'MAIN QUEST'}</span></div></section><section class="journal"><div class="journal-tabs"><button data-action="log" class="${panel==='log'?'active':''}">Battle log</button><button data-action="journey" class="${panel==='journey'?'active':''}">Journey</button><span class="journal-dot"></span></div><div class="journal-content" aria-live="polite">${panel==='log'?state.log.slice(-7).map(l=>`<div class="log-entry ${esc(l.type)}"><span class="log-marker">${icon(l.type==='enemy'?'crosshair':l.type==='heal'?'spark':'sword',12)}</span><p>${esc(l.text)}</p></div>`).join(''):ENCOUNTERS.map((en,i)=>`<div class="journey-stop ${i===state.depth?'here':''}"><span>${i<state.depth||state.status==='complete'?icon('check',15):roman[i]}</span><div><strong>${en.name}</strong><small>${i<state.depth||state.status==='complete'?'Cleared':i===state.depth?'Current location':'Unexplored'}</small></div></div>`).join('')}</div><div class="journal-bottom">${icon('book',13)} Every descent leaves a story.</div></section><section class="supplies"><span>THE WANDERER'S SUPPLIES</span><div><span>${icon('flask',18)}<b>${state.potions}</b><small>Potions</small></span><span>${icon('coin',18)}<b>${state.gold}</b><small>Gold</small></span><span>${icon('sun',18)}<b>${h.level}</b><small>Level</small></span></div></section></aside></div><section class="command-bar" aria-label="Combat actions"><div class="command-context"><span class="command-symbol">${icon(c.icon,26)}</span><div><span class="eyebrow">${playing?'MAKE YOUR MOVE':'THE LONE DESCENT'}</span><h3>${playing?`${esc(state.name)}'s turn`:state.status==='preparing'?'Your journey awaits':state.status==='victory'?'A breath before the next gate':state.status==='complete'?'The world remembers your name':'Find your courage again'}</h3></div></div><div class="commands">${[['attack','sword','Attack',`${c.attack} base damage`,true],['skill',c.icon,c.skill,`${c.cost} focus`,h.mp>=c.cost],['guard','shield','Guard','75% less damage · recover',true],['potion','flask','Potion',`${state.potions} remaining`,state.potions>0&&h.hp<c.hp]].map(([a,ic,label,sub,available],i)=>`<button class="command ${a==='attack'?'attack-command':''}" data-action="${a}" ${!playing||busy||!available?'disabled':''} title="${a==='skill'?c.description:label}"><span class="keycap">${i+1}</span>${icon(ic,22)}<span><strong>${label}</strong><small>${sub}</small></span></button>`).join('')}</div></section><footer class="page-footer"><span><i></i>${notice||'One soul. Seven possible paths. Choose carefully.'}</span><span>1–4 to act <b>·</b><button data-action="restart">New journey</button></span></footer></main>`;
 }
-function render() {
-  const encounter = ENCOUNTERS[state.depth], current = actor(state), currentClass = current && CLASSES.find(c => c.id === current.id), playing = state.status === 'battle';
-  const enemyHp = state.enemy?.hp ?? encounter.hp;
-  app.innerHTML = `
-    <header class="topbar">
-      <a class="brand" href="/" aria-label="The Hollow home"><span class="brand-sigil">${icon('spark', 29)}</span><span>THE HOLLOW<small>A TURN-BASED RPG</small></span></a>
-      <nav aria-label="Main navigation"><button class="nav-item active" data-action="expedition">${icon('map', 17)}<span>Expedition</span></button><button class="nav-item" data-action="party">${icon('people', 17)}<span>Party</span></button><button class="nav-item" data-action="codex">${icon('book', 17)}<span>Codex</span></button></nav>
-      <div class="header-actions"><span class="autosave"><i></i>${storageWarning ? 'Save unavailable' : 'Autosave on'}</span><button class="icon-button" data-action="sound" aria-label="${sound ? 'Mute sound' : 'Enable sound'}" title="${sound ? 'Mute sound' : 'Enable sound'}">${icon(sound ? 'sound' : 'mute', 18)}</button><button class="icon-button fullscreen" data-action="fullscreen" aria-label="Toggle fullscreen" title="Fullscreen">${icon('expand', 17)}</button></div>
-    </header>
-    <main>
-      <section class="page-heading"><div><div class="eyebrow"><span class="tiny-diamond"></span> THE DESCENT <span class="eyebrow-separator">/</span> EXPEDITION 001</div><h1>${encounter.name}<span class="title-dot">.</span></h1><p>${encounter.description}</p></div><div class="depth-badge"><span>DEPTH</span><strong>${roman[state.depth]} <em>/ III</em></strong><div class="depth-dots">${roman.map((r,i) => `<i class="${i <= state.depth ? 'filled' : ''}"></i>`).join('')}</div></div></section>
-      <div class="game-layout">
-        <section class="battle-column" aria-label="Battlefield">
-          <div class="arena depth-${state.depth} ${state.status === 'complete' ? 'cleansed' : ''}" data-resolving="${busy}" data-phase="${motion ? 'hero' : 'idle'}">
-            <div class="arena-shade"></div>
-            <div class="arena-top"><span class="location-label">${icon('map', 14)} THE HOLLOW <span>/</span> FLOOR 0${state.depth + 1}</span><span class="encounter-label"><i></i>${playing ? 'IN COMBAT' : state.status === 'preparing' ? 'UNEXPLORED' : state.status === 'defeat' ? 'PARTY FALLEN' : 'AREA CLEARED'}</span></div>
-            <div class="enemy-hud"><div class="enemy-heading"><span class="enemy-icon">${icon('crosshair', 17)}</span><div><strong>${encounter.enemy}</strong><small>${encounter.title}</small></div><span class="level-badge">LV. ${state.depth + 3}</span></div>${hpBar(enemyHp, encounter.hp, 'enemy-meter')}<div class="enemy-numbers"><span>${state.enemy?.burn ? `${icon('fire', 12)} BURNING · ${state.enemy.burn} TURNS` : 'ELITE CREATURE'}</span><span>${enemyHp} <em>/ ${encounter.hp}</em></span></div></div>
-            <div class="stage-party">${state.party.map((p,i) => { const c = CLASSES.find(c => c.id === p.id), moving = motion?.heroId === p.id; return `<div class="stage-hero ${p.hp <= 0 ? 'fallen' : ''} ${current?.id === p.id ? 'stage-active' : ''} ${p.guard ? 'guarding' : ''} ${moving ? 'performing' : ''}" data-hero="${p.id}" data-move="${moving ? motion.action : 'idle'}" style="--slot:${i};--fx-color:${moving ? motion.color : c.color};${moving ? `--move-name:${motion.name};--move-duration:${motion.duration}ms` : ''}">${sprite(p.id)}<span class="hero-shadow"></span><span class="guard-ward" aria-hidden="true">${icon('shield',100)}</span>${moving ? moveEffects(c) : ''}<div class="stage-name">${current?.id === p.id ? '<i></i>' : ''}${moving ? motion.label : c.name}${p.guard ? icon('shield',12) : ''}</div></div>`; }).join('')}</div>
-            ${!playing ? `<div class="arena-message ${state.status === 'preparing' ? 'intro-message' : ''}"><span>${state.status === 'preparing' ? 'YOUR STORY BEGINS BELOW' : state.status === 'defeat' ? 'THE LIGHT HAS FADED' : state.status === 'complete' ? 'THE HOLLOW IS SILENT' : 'A MOMENT OF RESPITE'}</span><h2>${state.status === 'preparing' ? 'Into the unknown.' : state.status === 'defeat' ? 'Darkness prevails.' : state.status === 'complete' ? 'Dawn will come again.' : 'The way opens.'}</h2><button class="primary-button" data-action="${state.status === 'preparing' ? 'begin' : state.status === 'victory' ? 'descend' : 'restart'}">${state.status === 'preparing' ? 'Begin encounter' : state.status === 'victory' ? 'Descend deeper' : 'New expedition'}${icon('arrow',17)}</button></div>` : ''}
-            <div class="arena-bottom"><span>${icon('fire',14)} ${playing ? `ROUND ${String(state.round).padStart(2,'0')}` : 'THE TORCHES ARE LIT'}</span><span>${playing ? `${currentClass.name}'s turn` : encounter.flavor}</span><span class="arena-corner">${icon('expand',14)}</span></div>
-          </div>
-          <div class="turn-strip"><span class="eyebrow">TURN ORDER</span><div class="turn-tokens">${(state.queue.length ? state.queue : [1,0,2]).filter(i => state.party[i].hp > 0).map((i,position) => `<span class="turn-token ${playing && position === state.cursor ? 'current' : ''} ${playing && position < state.cursor ? 'used' : ''}">${icon(CLASSES.find(c => c.id === state.party[i].id).icon,15)}${CLASSES.find(c => c.id === state.party[i].id).name}${position < state.cursor && playing ? icon('check',12) : ''}</span>`).join('')}<span class="turn-arrow">${icon('chevron',14)}</span><span class="turn-token enemy-token">${icon('crosshair',15)}The Eye</span></div><span class="round-number">${playing ? `Round ${state.round}` : 'Party acts first'}</span></div>
-          <div class="party-section-heading"><h3>Your party <span>03 / 03</span></h3><button class="text-button" data-action="party">${state.status === 'preparing' ? 'Manage party' : 'View party'}${icon('people',15)}</button></div>
-          <div class="party-cards">${state.party.map(p => { const c = CLASSES.find(c => c.id === p.id); return `<article class="hero-card ${current?.id === p.id ? 'selected' : ''} ${p.hp <= 0 ? 'dead' : ''}" style="--class-color:${c.color}"><div class="hero-portrait">${sprite(p.id)}</div><div class="hero-details"><div class="hero-card-heading"><h3>${c.name}</h3><span>${current?.id === p.id ? 'YOUR TURN' : p.hp <= 0 ? 'FALLEN' : c.role.toUpperCase()}</span></div><div class="stat-row"><span>${icon('heart',11)} HP</span><b>${p.hp}<em> / ${c.hp}</em></b></div>${hpBar(p.hp,c.hp)}<div class="stat-row focus-stat"><span>${icon('spark',11)} FOCUS</span><b>${p.mp}<em> / ${c.mp}</em></b></div>${hpBar(p.mp,c.mp,'focus-meter')}</div></article>`; }).join('')}</div>
-        </section>
-        <aside class="side-column">
-          <section class="quest-card"><div class="eyebrow">${icon('flag',14)} CURRENT OBJECTIVE</div><h2>${state.status === 'complete' ? 'A light in the dark' : 'Silence the watcher'}</h2><p>${state.status === 'complete' ? 'The corruption has ended. Your party has survived the Hollow.' : 'Defeat the guardian and find a way deeper into the Hollow.'}</p><div class="quest-footer"><span>${icon('coin',15)} ${state.status === 'complete' ? state.gold : encounter.reward} gold</span><span>${state.status === 'complete' ? 'COMPLETED' : 'MAIN QUEST'}</span></div></section>
-          <section class="journal"><div class="journal-tabs"><button data-action="log" class="${panel === 'log' ? 'active' : ''}">Battle log</button><button data-action="journey" class="${panel === 'journey' ? 'active' : ''}">Journey</button><span class="journal-dot"></span></div><div class="journal-content" aria-live="polite" aria-label="${panel === 'log' ? 'Battle log' : 'Journey'}">${panel === 'log' ? state.log.slice(-7).map((l,i,arr) => `<div class="log-entry ${esc(l.type)} ${i === arr.length-1 ? 'latest' : ''}"><span class="log-marker">${l.type === 'damage' ? icon('sword',12) : l.type === 'heal' ? icon('spark',12) : l.type === 'enemy' ? icon('crosshair',12) : '<i></i>'}</span><p>${esc(l.text)}</p></div>`).join('') : ENCOUNTERS.map((e,i) => `<div class="journey-stop ${i === state.depth ? 'here' : ''}"><span>${i < state.depth || state.status === 'complete' ? icon('check',15) : roman[i]}</span><div><strong>${e.name}</strong><small>${i < state.depth || state.status === 'complete' ? 'Cleared' : i === state.depth ? 'Current location' : 'Unexplored'}</small></div></div>`).join('')}</div><div class="journal-bottom">${icon('book',13)} Every descent leaves a story.</div></section>
-          <section class="supplies"><span>EXPEDITION SUPPLIES</span><div><span>${icon('flask',18)}<b>${state.potions}</b><small>Potions</small></span><span>${icon('coin',18)}<b>${state.gold}</b><small>Gold</small></span><span>${icon('people',18)}<b>${state.party.filter(p => p.hp > 0).length}<em>/3</em></b><small>Alive</small></span></div></section>
-        </aside>
-      </div>
-      <section class="command-bar" aria-label="Combat actions"><div class="command-context"><span class="command-symbol">${icon(currentClass?.icon || 'sword',26)}</span><div><span class="eyebrow">${playing ? 'MAKE YOUR MOVE' : 'PREPARE FOR THE DESCENT'}</span><h3>${playing ? `${currentClass.name}'s turn` : state.status === 'preparing' ? 'Your party is ready' : state.status === 'victory' ? 'Take a breath. Then go deeper.' : state.status === 'complete' ? 'The Hollow remembers your names.' : 'Gather your courage again.'}</h3></div></div><div class="commands">${[
-        ['attack','sword','Attack','Basic strike',true],
-        ['skill',currentClass?.icon || 'spark',currentClass?.skill || 'Ability',playing ? `${currentClass.cost} focus` : 'Class ability',!playing || current.mp >= currentClass.cost],
-        ['guard','shield','Guard','+5 focus · less damage',true],
-        ['potion','flask','Potion',`${state.potions} remaining`,playing && state.potions > 0 && current.hp < currentClass.hp],
-      ].map(([action,ic,label,sub,available],i) => `<button class="command ${action === 'attack' ? 'attack-command' : ''}" data-action="${action}" ${!playing || busy || !available ? 'disabled' : ''} title="${action === 'skill' && currentClass ? currentClass.description : label}"><span class="keycap">${i+1}</span>${icon(ic,22)}<span><strong>${label}</strong><small>${sub}</small></span></button>`).join('')}</div></section>
-      <footer class="page-footer"><span><i></i>${notice || 'Choose carefully. The dark is patient.'}</span><span>1–4 to act <b>·</b> ${sound ? 'Sound on' : 'Sound off'} <b>·</b> <button data-action="restart">New expedition</button></span></footer>
-    </main>
-    <dialog id="game-dialog" aria-labelledby="dialog-title"></dialog>`;
-  if (modal) renderModal();
+let idleTimer;
+function stopIdle(){clearInterval(idleTimer);}
+function startIdle(){stopIdle();let frame=0;idleTimer=setInterval(()=>{if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;frame=(frame+1)%6;app.querySelectorAll('.frame-sprite:not(.playing-frames)').forEach(el=>setFrame(el,0,frame));},200);}
+function setFrame(el,row,frame){el.dataset.frame=String(frame);el.dataset.row=String(row);el.style.backgroundPosition=`${frame*20}% ${row*100/3}%`;}
+async function playFrames(el,action,duration){
+ const row={attack:1,guard:2,skill:3,potion:0}[action];el.classList.add('playing-frames');
+ if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){setFrame(el,row,3);await animationDelay(duration);}
+ else {const start=performance.now();await new Promise(resolve=>{function tick(now){const progress=Math.min(1,(now-start)/duration);setFrame(el,row,Math.min(5,Math.floor(progress*6)));if(progress<1)requestAnimationFrame(tick);else resolve();}requestAnimationFrame(tick);});}
+ el.classList.remove('playing-frames');setFrame(el,0,0);
 }
-function renderModal() {
-  const dialog = document.querySelector('#game-dialog');
-  let content;
-  if (modal === 'party') {
-    const editing = state.status === 'preparing';
-    content = `<div class="eyebrow">SEVEN SOULS. ONE DESCENT.</div><h2 id="dialog-title">Gather your party<span>.</span></h2><p>${editing ? 'Choose three heroes. A balanced party is a light in the dark.' : 'Your formation is locked for this expedition. Start a new run to change heroes.'}</p><div class="class-grid">${CLASSES.map(c => `<button data-action="choose" data-class="${c.id}" class="class-choice ${selection.includes(c.id) ? 'chosen' : ''}" ${!editing ? 'disabled' : ''} aria-pressed="${selection.includes(c.id)}"><span class="selection-mark">${selection.includes(c.id) ? icon('check',13) : '+'}</span>${sprite(c.id)}<h3>${c.name}</h3><span>${c.role}</span><small>${c.hp} HP <i>·</i> ${c.mp} focus</small></button>`).join('')}</div><div class="party-help">${selection.map(id => {const c=CLASSES.find(c=>c.id===id);return `<p><b>${c.skill}</b> ${c.description}</p>`;}).join('')}</div><div class="modal-footer"><span>${selection.length} / 3 HEROES SELECTED</span><button class="primary-button" data-action="${editing ? 'save-party' : 'close'}" ${editing && selection.length !== 3 ? 'disabled' : ''}>${editing ? 'Confirm party' : 'Return to expedition'}${icon('arrow',16)}</button></div>`;
-  } else if (modal === 'codex') {
-    content = `<div class="eyebrow">THE TRAVELER'S COMPANION</div><h2 id="dialog-title">Surviving the Hollow<span>.</span></h2><p>A small guide for the long way down.</p><div class="codex-grid">${[['sword','Every move matters','Your living heroes act in speed order. After all have acted, the enemy attacks. Every third round, its attack hits the entire party.'],['spark','Spend your focus wisely','Each class has a unique ability. Focus recovers by 2 each round; guarding restores an additional 5. Soulfire keeps burning after the cast.'],['shield','Keep the light alive','Guard reduces damage by 65%. Potions restore 45 health to the acting hero. Paladins heal the most wounded living ally. Fallen heroes cannot act.'],['map','Three gates to dawn','Clear three encounters to end the corruption. Between floors, the party recovers health and full focus, fallen allies revive, and you receive a potion.']].map(([ic,title,text])=>`<article>${icon(ic,24)}<h3>${title}</h3><p>${text}</p></article>`).join('')}</div><div class="modal-footer"><span>KEYBOARD: 1 ATTACK · 2 ABILITY · 3 GUARD · 4 POTION</span><button class="primary-button" data-action="close">Return${icon('arrow',16)}</button></div>`;
-  } else {
-    content = `<div class="eyebrow">A NEW BEGINNING</div><h2 id="dialog-title">Return to the surface?</h2><p>Your current expedition will be replaced. Choose a new party and descend again.</p><div class="modal-footer"><button class="secondary-button" data-action="close">Keep exploring</button><button class="primary-button" data-action="confirm-restart">New expedition${icon('reset',16)}</button></div>`;
-  }
-  dialog.innerHTML = `<button class="modal-close" data-action="close" aria-label="Close dialog">×</button>${content}`;
-  dialog.showModal();
-  dialog.addEventListener('cancel', () => { modal = null; });
-  dialog.addEventListener('click', e => { if(e.target === dialog) closeModal(); });
+function render(){stopIdle();app.innerHTML=header()+(state.status==='intro'?renderIntro():renderJourney())+'<dialog id="game-dialog" aria-labelledby="dialog-title"></dialog>';startIdle();if(modal)renderModal();}
+function renderModal(){
+ const dialog=app.querySelector('#game-dialog');let content;
+ if(modal==='character'){const c=heroStats(state.hero);content=`<div class="eyebrow">ONE SOUL. ONE CALLING.</div><h2 id="dialog-title">${esc(state.name)}<span>.</span></h2><div class="character-dialog">${sprite(c.id)}<div><h3>Level ${state.hero.level} ${c.name}</h3><p>${c.story}</p><p><b>${c.hp}</b> maximum health · <b>${c.mp}</b> focus · <b>${c.attack}</b> attack</p><p><b>${c.skill}</b> ${c.description}</p></div></div><div class="modal-footer"><span>Your class is fixed for this journey.</span><button class="primary-button" data-action="close">Return${icon('arrow',16)}</button></div>`;}
+ else if(modal==='codex'){content=`<div class="eyebrow">THE LONE TRAVELER'S COMPANION</div><h2 id="dialog-title">Surviving the Hollow<span>.</span></h2><p>A guide for your solitary descent.</p><div class="codex-grid">${[['sword','One hero. Every choice.','Choose your class in the intro. After each action, the enemy responds. Weapon and spell animations finish before the enemy takes its turn.'],['shield','Watch the enemy','Every third enemy strike is heavy. The next move is shown beneath the battlefield. Guard reduces damage by 75%, restores 5 focus, and recovers 8 health.'],['spark','Know your calling','Focus recovers by 3 each turn. Each class has a unique ability; Paladin, Witch, and Monk abilities also heal you. Potions restore 50 health.'],['map','Grow at the refuges','Clear three gates to end the corruption. Between floors, you gain a level, fully recover health and focus, improve your attacks, and receive a potion.']].map(([ic,title,text])=>`<article>${icon(ic,24)}<h3>${title}</h3><p>${text}</p></article>`).join('')}</div><div class="modal-footer"><span>1 ATTACK · 2 ABILITY · 3 GUARD · 4 POTION</span><button class="primary-button" data-action="close">Return${icon('arrow',16)}</button></div>`;}
+ else content=`<div class="eyebrow">A NEW BEGINNING</div><h2 id="dialog-title">Start a new journey?</h2><p>Your current solo journey will be replaced. Return to the intro to name a wanderer and choose a different class.</p><div class="modal-footer"><button class="secondary-button" data-action="close">Keep exploring</button><button class="primary-button" data-action="confirm-restart">New journey${icon('reset',16)}</button></div>`;
+ dialog.innerHTML=`<button class="modal-close" data-action="close" aria-label="Close dialog">×</button>${content}`;dialog.showModal();dialog.addEventListener('cancel',()=>{modal=null;});dialog.addEventListener('click',e=>{if(e.target===dialog)closeModal();});
 }
-function closeModal() { modal = null; document.querySelector('#game-dialog')?.close(); }
-function openModal(type) { modal = type; selection = state.party.map(p => p.id); renderModal(); }
-const animationDelay = ms => new Promise(resolve => setTimeout(resolve, ms));
-function floatingNumber(parent, value, healing = false) {
-  const number = document.createElement('span');
-  number.className = `damage-number${healing ? ' healing-number' : ''}`;
-  number.setAttribute('aria-hidden', 'true'); number.textContent = `${healing ? '+' : '−'}${value}`;
-  parent.append(number);
+function closeModal(){modal=null;app.querySelector('#game-dialog')?.close();}
+function openModal(type){modal=type;renderModal();}
+function floatingNumber(parent,value,healing=false){if(!value)return;const number=document.createElement('span');number.className=`damage-number${healing?' healing-number':''}`;number.setAttribute('aria-hidden','true');number.textContent=`${healing?'+':'−'}${value}`;parent.append(number);}
+function launchProjectile(){if(!['sorcerer','witch','gunslinger'].includes(motion.heroId)||!['attack','skill'].includes(motion.action))return;const arena=app.querySelector('.arena'),hero=app.querySelector('.stage-hero');const b=arena.getBoundingClientRect(),o=hero.getBoundingClientRect(),x=o.left-b.left+o.width*.7,y=o.top-b.top+o.height*.3;const projectile=document.createElement('span');projectile.className=`move-projectile ${motion.heroId==='gunslinger'?'tracer':motion.effect==='siphon-soul'?'soul':''}`;projectile.setAttribute('aria-hidden','true');projectile.style.cssText=`left:${x}px;top:${y}px;--fx-color:${motion.color};--move-duration:${motion.duration}ms;--travel-x:${b.width*.59-x}px;--travel-y:${b.height*.26-y}px`;arena.append(projectile);}
+async function performAction(action){
+ const current=actor(state),next=structuredClone(state),result=act(next,action);if(!result.ok){notice=result.reason;render();return;}
+ const move=characterMove(current.id,action),reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ motion={...move,duration:reduced?120:move.duration,heroId:current.id,action};busy=true;notice='';render();launchProjectile();tone();
+ try {
+  const hero=app.querySelector('.stage-hero'),frames=playFrames(hero.querySelector('.frame-sprite'),action,motion.duration);
+  await animationDelay(motion.duration*.55);
+  if(result.damage||result.burnDamage){const hud=app.querySelector('.enemy-hud');hud.classList.add('contact');floatingNumber(hud,result.damage+result.burnDamage);hud.querySelector('.enemy-meter>span').style.width=`${next.enemy.hp/next.enemy.maxHp*100}%`;hud.querySelector('.enemy-numbers>span:last-child').innerHTML=`${next.enemy.hp}<em> / ${next.enemy.maxHp}</em>`;}
+  if(result.healed){hero.classList.add('receiving-heal');floatingNumber(hero,result.healed,true);}
+  await frames;
+  if(result.enemyDamage){app.querySelector('.arena').dataset.phase='enemy';hero.classList.remove('performing');hero.classList.add('taking-hit');floatingNumber(hero,result.enemyDamage);await animationDelay(reduced?80:440);}
+  state=next;persist();
+ }finally{busy=false;motion=null;render();}
 }
-function launchProjectile() {
-  const ranged = ['sorcerer', 'witch', 'gunslinger'].includes(motion.heroId);
-  if (!ranged || !['attack','skill'].includes(motion.action)) return;
-  const arena = app.querySelector('.arena'), hero = app.querySelector(`[data-hero="${motion.heroId}"]`);
-  const bounds = arena.getBoundingClientRect(), origin = hero.getBoundingClientRect();
-  const x = origin.left - bounds.left + origin.width * .78, y = origin.top - bounds.top + origin.height * .25;
-  const projectile = document.createElement('span');
-  projectile.className = `move-projectile ${motion.heroId === 'gunslinger' ? 'tracer' : motion.effect === 'siphon-soul' ? 'soul' : ''}`;
-  projectile.setAttribute('aria-hidden','true');
-  projectile.style.cssText = `left:${x}px;top:${y}px;--fx-color:${motion.color};--move-duration:${motion.duration}ms;--travel-x:${bounds.width*.59-x}px;--travel-y:${bounds.height*.26-y}px`;
-  arena.append(projectile);
+async function handle(action,element){
+ if(busy)return;
+ if(['attack','skill','guard','potion'].includes(action)){await performAction(action);return;}
+ switch(action){
+  case 'intro-back':state.introStep='story';persist();render();break;
+  case 'choose-class':state.selectedClass=element.dataset.class;persist();render();break;
+  case 'accept-class':chooseClass(state,state.selectedClass||'knight');persist();render();break;
+  case 'preview':{busy=true;const stage=app.querySelector('.preview-stage');stage.dataset.resolving='true';app.querySelectorAll('.preview-controls button').forEach(b=>b.disabled=true);try{await playFrames(stage.querySelector('.frame-sprite'),element.dataset.move,characterMove(state.selectedClass||'knight',element.dataset.move).duration);}finally{busy=false;stage.dataset.resolving='false';app.querySelectorAll('.preview-controls button').forEach(b=>b.disabled=false);}break;}
+  case 'begin':startEncounter(state);persist();tone();render();break;
+  case 'descend':descend(state);persist();tone();render();break;
+  case 'character':if(state.hero)openModal('character');break;
+  case 'codex':openModal('codex');break;
+  case 'restart':openModal('restart');break;
+  case 'confirm-restart':closeModal();state=createGame();notice='';persist();render();break;
+  case 'close':closeModal();break;
+  case 'log':case 'journey':panel=action;render();break;
+  case 'sound':sound=!sound;tone();render();break;
+  case 'fullscreen':try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{notice='Fullscreen is unavailable in this browser.';render();}break;
+  case 'expedition':closeModal();window.scrollTo({top:0,behavior:'smooth'});break;
+ }
 }
-async function performAction(action) {
-  // Resolve a copy first so unusable actions never animate or spend a turn.
-  const current = actor(state), next = structuredClone(state), previousEvents = new Set(next.log);
-  const result = act(next, action);
-  if (!result.ok) { notice = result.reason; render(); return; }
-  const move = characterMove(current.id, action);
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  motion = { ...move, duration: reduced ? 120 : move.duration, heroId: current.id, action };
-  busy = true; notice = ''; render(); launchProjectile(); tone();
-  try {
-    await animationDelay(motion.duration * .55);
-    if (result.damage > 0) {
-      const hud = app.querySelector('.enemy-hud');
-      hud.classList.add('contact'); floatingNumber(hud, result.damage);
-      hud.querySelector('.enemy-meter > span').style.width = `${next.enemy.hp / next.enemy.maxHp * 100}%`;
-      hud.querySelector('.enemy-numbers > span:last-child').innerHTML = `${next.enemy.hp} <em>/ ${next.enemy.maxHp}</em>`;
-    }
-    for (const hero of next.party) {
-      const previous = state.party.find(p => p.id === hero.id);
-      if (hero.hp > previous.hp) {
-        const target = app.querySelector(`[data-hero="${hero.id}"]`);
-        target.classList.add('receiving-heal'); floatingNumber(target, hero.hp - previous.hp, true);
-      }
-    }
-    await animationDelay(motion.duration * .45);
-    const incoming = next.log.filter(entry => entry.type === 'enemy' && !previousEvents.has(entry));
-    // Only this action's enemy turn can produce incoming damage.
-    if (next.round !== state.round || next.status === 'defeat') {
-      const strikes = incoming.map(entry => entry.text.match(/: (\w+) takes (\d+) damage\./)).filter(Boolean);
-      if (strikes.length) {
-        app.querySelector('.arena').dataset.phase = 'enemy';
-        app.querySelector('.performing')?.classList.remove('performing');
-        for (const [,name,damage] of strikes.slice(-state.party.filter(p => p.hp > 0).length)) {
-          const cls = CLASSES.find(c => c.name === name), target = cls && app.querySelector(`[data-hero="${cls.id}"]`);
-          if (target) { target.classList.add('taking-hit'); floatingNumber(target, damage); }
-        }
-        await animationDelay(reduced ? 80 : 440);
-      }
-    }
-    state = next; persist();
-  } finally { busy = false; motion = null; render(); }
-}
-async function handle(action, element) {
-  if (busy) return;
-  if (['attack','skill','guard','potion'].includes(action)) {
-    await performAction(action); return;
-  }
-  switch(action) {
-    case 'begin': startEncounter(state); tone(); persist(); render(); break;
-    case 'descend': descend(state); tone(); persist(); render(); break;
-    case 'party': openModal('party'); break;
-    case 'codex': openModal('codex'); break;
-    case 'restart': openModal('restart'); break;
-    case 'confirm-restart': state = createGame(); notice = ''; closeModal(); persist(); render(); openModal('party'); break;
-    case 'close': closeModal(); break;
-    case 'choose': { const id = element.dataset.class; if (selection.includes(id)) selection = selection.filter(x => x !== id); else if (selection.length < 3) selection.push(id); const scroll = document.querySelector('#game-dialog').scrollTop; document.querySelector('#game-dialog').close(); renderModal(); document.querySelector('#game-dialog').scrollTop = scroll; break; }
-    case 'save-party': if (selection.length === 3) { state = createGame(selection); closeModal(); persist(); render(); } break;
-    case 'log': case 'journey': panel = action; render(); break;
-    case 'sound': sound = !sound; tone(); render(); break;
-    case 'fullscreen': try { if(document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); } catch { notice = 'Fullscreen is unavailable in this browser.'; render(); } break;
-    case 'expedition': closeModal(); window.scrollTo({ top:0, behavior:'smooth' }); break;
-  }
-}
-app.addEventListener('click', e => { const button = e.target.closest('[data-action]'); if(button && !button.disabled) handle(button.dataset.action, button); });
-document.addEventListener('keydown', e => { if (modal || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return; const action = { '1':'attack','2':'skill','3':'guard','4':'potion' }[e.key]; if (action && state.status === 'battle') { e.preventDefault(); handle(action); } });
+app.addEventListener('submit',e=>{if(e.target.id!=='name-form')return;e.preventDefault();state.name=cleanName(new FormData(e.target).get('name'));state.introStep='class';persist();render();});
+app.addEventListener('click',e=>{const button=e.target.closest('[data-action]');if(button&&!button.disabled)handle(button.dataset.action,button);});
+document.addEventListener('keydown',e=>{if(modal||e.ctrlKey||e.metaKey||e.altKey||e.repeat||e.target.matches('input,textarea'))return;const a={'1':'attack','2':'skill','3':'guard','4':'potion'}[e.key];if(a&&state.status==='battle'){e.preventDefault();handle(a);}});
 render();
