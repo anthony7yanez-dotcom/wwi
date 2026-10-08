@@ -2,6 +2,10 @@
 
 A dark fantasy solo turn-based RPG inspired by the supplied pixel-art reference.
 
+## Project direction
+
+The [project vision](docs/PROJECT_VISION.md) establishes the intended story-driven adventure: one protagonist exploring a dying world, a sacred flame, a cult welcoming the darkness, environmental abilities, and strategic battles. The [assessment and development plan](docs/DEVELOPMENT_PLAN.md) records what the current prototype supports and proposes staged development of the first playable region. Proposed additions in that plan await review; the download currently remains the three-encounter solo prototype described below.
+
 ## Download and play
 
 On GitHub, choose **Code → Download ZIP**, extract it, and open **play.html** in your browser. This standalone file embeds the game code, artwork, animations, and fonts. No installation, server, or internet connection is needed to play. Browser-local saving depends on your browser permitting local-file storage.
