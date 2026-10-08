@@ -40,7 +40,7 @@ test('Paladin heals wounded allies, Monk restores party focus, and potion revive
 });
 test('boss heavy wave hits all living members and coordinated guards mitigate every target',()=>{
  const s=adventure('knight');unlock(s.world);recruit(s,'warrior');visit(s.world,'shrine',480,336);assert.ok(beginWorldBattle(s.world,s.game,'shrine-warden'));s.game.round=3;assert.ok(enemyIntent(s.game).heavy);
- act(s.game,'guard',()=>0);const hit=act(s.game,'guard',()=>0);assert.equal(hit.enemyHits.length,2);assert.ok(hit.enemyHits.every(h=>h.damage<=9));assert.ok(activeParty(s.game).every(h=>!h.guard));
+ act(s.game,'guard',()=>0);const hit=act(s.game,'guard',()=>0);assert.equal(hit.enemyHits.length,2);assert.ok(hit.enemyHits.every(h=>h.damage===Math.round(enemyIntent({...s.game,round:3}).damage*.25)));assert.ok(activeParty(s.game).every(h=>!h.guard));
  s.game.round=4;assert.ok(enemyIntent(s.game).shell);const shell=act(s.game,'attack',()=>0);assert.equal(shell.damage,Math.round(heroStats(s.game.hero).attack*.6));assert.ok(validAdventureSave(s));
 });
 test('reserve exploration abilities and protagonist abilities unlock one-time discoveries, never consume combat focus',()=>{

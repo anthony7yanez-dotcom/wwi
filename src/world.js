@@ -1,3 +1,4 @@
+import { ALCHEMIST } from './skills.js';
 import { SECOND_MAPS, SECOND_CHOICES } from './chapter-two.js';
 import { PATROLS, patrolPose, patrolLength, validPatrols } from './patrols.js';
 import { CHAPTER_MAPS, chapterBlockers, chapterObjects, chapterInteract, chapterFinish, chapterObjective, CHAPTER_FINISHES, validChapter, remember } from './chapter.js';
@@ -71,6 +72,11 @@ MAPS.shrine.exits.push({edge:'north',label:'Inner sanctuary',destination:'sanctu
 export function mapExits(world){return MAPS[world.map].exits.filter(e=>(!e.chapterOnly||world.chapter?.sealOpened)&&(!e.secondOnly||world.chapterTwo));}
 export function enemySpawns(world){return ENEMY_SPAWNS.map(e=>({...e,...patrolPose(e.id,world.patrols?.[e.id]||0)})).map(e=>world.chapter&&e.id==='shrine-warden'?{...e,map:'sanctuary'}:e).filter(e=>(!world.chapter||e.id!=='shrine-warden'||world.chapter.ritualSeen)&&(world.chapterTwo||!SECOND_MAPS[e.map])&&(e.id!=='thorn-sentinel'||world.chapterTwo?.decision&&(world.chapterTwo.decision!=='channels'||world.chapterTwo.channels)));}
 export const ENEMY_SPAWNS=[
+ {id:'hollows-skeleton',map:'hollows',x:304,y:336,encounter:'bone-guard'},
+ {id:'hollows-succubus',map:'hollows',x:624,y:240,encounter:'veil-succubus'},
+ {id:'greyfen-ogre',map:'greyfen',x:608,y:336,encounter:'marsh-ogre'},
+ {id:'greyfen-undead',map:'greyfen',x:352,y:240,encounter:'hollow-undead'},
+ {id:'beacon-vampire',map:'beacon',x:624,y:336,encounter:'beacon-vampire'},
   {id:'greyfen-wolf',map:'greyfen',x:352,y:336,encounter:'fen-stalker'},
   {id:'greyfen-fanatic',map:'greyfen',x:672,y:272,encounter:'marsh-fanatic'},
   {id:'hollows-fanatic',map:'hollows',x:480,y:336,encounter:'marsh-fanatic'},
@@ -109,7 +115,7 @@ export const FIELD_NODES=[
  {id:'field-gunslinger',classId:'gunslinger',map:'approach',x:736,y:256,kind:'lever',name:'High chain catch',text:'A broken chain catch sits too high to reach. A precise ricochet could release it.',reward:'The shot catches the iron latch. A courier’s pouch drops within reach. You find a route seal from the missing caravan.',gold:40},
  {id:'field-monk',classId:'monk',map:'forest',x:384,y:416,kind:'ward',name:'Restless pool',text:'Ripples obscure the pool’s reflection. It needs a still, patient touch.',reward:'The water settles, revealing a token from the lost monastery delegation. A moment of silence restores everyone’s focus.',focus:true},
 ];
-export function worldObjects(world,game){return [...MAPS[world.map].objects.filter(o=>!world.chapter||o.id!=='shrine-altar'),...FIELD_NODES.filter(n=>n.map===world.map&&(!world.chapter||game&&hasClass(game,n.classId))),...(world.chapter?chapterObjects(world,game):game?companionObjects(world,game):[])];}
+export function worldObjects(world,game){return [...MAPS[world.map].objects.filter(o=>!world.chapter||o.id!=='shrine-altar'),...(world.chapter&&world.map===ALCHEMIST.map?[ALCHEMIST]:[]),...FIELD_NODES.filter(n=>n.map===world.map&&(!world.chapter||game&&hasClass(game,n.classId))),...(world.chapter?chapterObjects(world,game):game?companionObjects(world,game):[])];}
 export function createWorld() {
   return {layoutVersion:2,map:'courtyard',x:464,y:368,facing:'south',conversation:null,cleared:[],battle:null,grace:0,patrols:{},flags:{caretaker:false,traveler:false,chest:false,quest:false,gate:false,ward:false,reported:false,forestChest:false,shrine:false,...Object.fromEntries(FIELD_NODES.map(n=>[n.id,false]))},visited:['courtyard']};
 }
@@ -191,6 +197,7 @@ export function questInfo(world) {
 // Dialogue is authored local knowledge, not a revelation of the flame's origin.
 export function interactWorld(world,game) {
   const object=nearbyObject(world,game);if(!object)return null;
+  if(object.id==='alchemist')return {id:object.id,speaker:'Neris Vale',lines:['Harker keeps my bench beside his repairs. I learned alchemy making ward medicine; the same principles can strengthen a calling without changing it.','I teach four techniques for each class. The first lesson is free. Later lessons need practice and reagents. Bring your recruited companions; those resting in reserve can study too.'],lastLabel:'Study techniques',finish:'training'};
   if(world.chapter){const result=chapterInteract(world,game,object);if(result)return result;}
   const f=world.flags;
   const talk=(speaker,lines,lastLabel='Return',finish=null)=>({id:object.id,speaker,lines,lastLabel,finish});
@@ -255,6 +262,7 @@ export function interactWorld(world,game) {
 }
 
 export function finishWorldDialogue(world,finish,game=null,choice=null) {
+  if(finish==='training')return Boolean(game?.status==='preparing'&&world.map===ALCHEMIST.map&&Math.hypot(world.x-ALCHEMIST.x,world.y-ALCHEMIST.y)<=58);
   if(world.chapter){const result=chapterFinish(world,game,finish,choice);if(result!==null)return result;}
 
   if(finish==='accept'){world.flags.quest=true;world.flags.caretaker=true;if(world.chapter&&!world.chapter.wayflames.includes('courtyard'))world.chapter.wayflames.push('courtyard');}
@@ -305,7 +313,7 @@ export function finishWorldBattle(world,game,result){
   }
   Object.assign(world,world.battle.returnTo);world.grace=result==='retreat'?96:64;
   if(result==='defeat'){Object.assign(world,{map:'courtyard',x:464,y:368,facing:'south'});partyMembers(game).forEach(h=>{const stats=heroStats(h);h.hp=stats.hp;h.mp=stats.mp;});game.potions=Math.max(game.potions,3);log(game,'The caretaker finds you on the road. You recover at the courtyard fire. The enemy still waits.','story');}
-  world.battle=null;game.status='preparing';game.enemy=null;game.encounterId=null;partyMembers(game).forEach(h=>{h.guard=false;if(!h.hp)h.hp=1;});game.acted=[];game.round=1;
+  world.battle=null;game.status='preparing';game.enemy=null;game.encounterId=null;partyMembers(game).forEach(h=>{h.guard=false;if(!h.hp)h.hp=1;});game.acted=[];game.partyWard=false;game.round=1;
   return true;
 }
 
@@ -319,7 +327,7 @@ export function validWorld(world,game=null) {
   if(world.conversation!==null){
     const c=world.conversation;
     if(c?.choices){const values=c.finish==='resolve'&&c.id==='caretaker'?['people','act','try']:c.finish==='second-choice'&&c.id==='second-steward'?SECOND_CHOICES.map(c=>c.value):null;if(!values||!Array.isArray(c.choices)||c.choices.length!==3||!c.choices.every((item,i)=>item.value===values[i]&&typeof item.label==='string'&&item.label.length<=120))return false;}
-    if(!c||!([...MAPS[world.map].objects,...FIELD_NODES.filter(n=>n.map===world.map),...COMPANIONS.filter(n=>n.map===world.map).map(n=>({id:'companion-'+n.id})),...chapterObjects(world,{companions:[]})].some(o=>o.id===c.id))||typeof c.speaker!=='string'||c.speaker.length>80||!Array.isArray(c.lines)||c.lines.length<1||c.lines.length>5||!c.lines.every(line=>typeof line==='string'&&line.length<=500)||!Number.isInteger(c.page)||c.page<0||c.page>=c.lines.length||typeof c.lastLabel!=='string'||c.lastLabel.length>80||![null,...CHAPTER_FINISHES,'accept','traveler','gate','report','rest',...COMPANIONS.flatMap(n=>['recruit:'+n.id,'field:'+n.id])].includes(c.finish))return false;
+    if(!c||!([...MAPS[world.map].objects,...FIELD_NODES.filter(n=>n.map===world.map),...COMPANIONS.filter(n=>n.map===world.map).map(n=>({id:'companion-'+n.id})),...chapterObjects(world,{companions:[]}),...(world.chapter&&world.map===ALCHEMIST.map?[ALCHEMIST]:[])].some(o=>o.id===c.id))||typeof c.speaker!=='string'||c.speaker.length>80||!Array.isArray(c.lines)||c.lines.length<1||c.lines.length>5||!c.lines.every(line=>typeof line==='string'&&line.length<=500)||!Number.isInteger(c.page)||c.page<0||c.page>=c.lines.length||typeof c.lastLabel!=='string'||c.lastLabel.length>80||![null,...CHAPTER_FINISHES,'training','accept','traveler','gate','report','rest',...COMPANIONS.flatMap(n=>['recruit:'+n.id,'field:'+n.id])].includes(c.finish))return false;
   }
   return canStand(world,world.x,world.y,game);
 }

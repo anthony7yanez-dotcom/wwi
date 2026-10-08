@@ -53,3 +53,7 @@ The protagonist is always active and retains their selected class. Maximum four 
 New Chapter I journeys meet Aldren, Branna, and Ilyra as local people who have reasons to stay. They include the selected-class counterpart and do not automatically recruit anyone. Existing older adventures retain their already recruited roster and established scenes; never delete companions to enforce new pacing retroactively.
 
 Future story scenes must resolve an identity to one of: protagonist, recruited member, unchosen but not yet recruited candidate, or selected-class non-playable counterpart. Essential information is delivered on every route. Personal quests can change trust, rewards, and optional dialogue; essential chapter milestones must remain reachable.
+
+## Neris Vale — alchemist
+
+An adult ward-medicine maker sharing Harker’s supply-house workbench in Chapter I and on return visits from Chapter II. Practical and patient; her motive is to make useful techniques available to the people taking the ward roads. She understands medicines and class practice, and knows no hidden explanation of the First Fire. She teaches four fixed-class techniques per recruited character, with level and reagent costs. Her existing villager appearance is marked by an alchemy sign.

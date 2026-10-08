@@ -1,3 +1,4 @@
+import { ENEMY_VISUALS } from './enemy-art.js';
 // Timings cover anticipation, contact, and recovery; combat advances after recovery.
 export const CHARACTER_MOVES = {
   knight: { color: '#9bd8e6', attack: ['Sword thrust', 'steel-slash', 720], guard: ['Shield wall', 'shield-wall', 680], skill: ['Shield bash', 'shield-shock', 860] },
@@ -20,4 +21,8 @@ export const ENEMY_MOVES = {
   sentinel:{base:4,columns:6,attack:['Crescent slash',780],heavy:['Crimson sweep',1080],death:['Ashen fall',820]},
   warden:{base:8,columns:6,attack:['Stone cleave',1000],heavy:['Rootquake',1320],death:['Broken roots',1100]},
 };
-export function enemyMove(id,action){const move=ENEMY_MOVES[id];return {row:move.base+{attack:1,heavy:2,death:3}[action],columns:id==='wolf'&&action==='death'?6:move.columns,label:move[action][0],duration:move[action][1]};}
+for(const id of ['skeleton','succubus','ogre','undead','vampire']){const v=ENEMY_VISUALS[id];ENEMY_MOVES[id]={base:v.base,columns:6,attack:[{skeleton:'Bone blade',succubus:'Barbed lash',ogre:'Club sweep',undead:'Grave grasp',vampire:'Crimson rapier'}[id],id==='ogre'?1000:780],heavy:[{skeleton:'Ossuary volley',succubus:'Violet covenant',ogre:'Boulder crush',undead:'Gravewake',vampire:'Sanguine siphon'}[id],id==='ogre'?1320:1100],death:['Final collapse',900]};}
+export function enemyMove(id,action){const move=ENEMY_MOVES[id],v=ENEMY_VISUALS[id];
+ const frames=v.variety?{attack:[0,1,2,0],heavy:[0,3,4,2,0],special:[3,4,3,2,0],death:[0,2,5],hurt:[2,0]}[action]:action==='special'?[0,1,2,3,2,1,0]:action==='hurt'?[1,0]:null;
+ return {row:v.variety?v.base+1:v.base+{attack:1,heavy:2,special:2,death:3,hurt:0}[action],rows:v.rows,columns:id==='wolf'&&action==='death'?6:move.columns,frames,label:action==='special'?{wolf:'Crimson howl',sentinel:'Covenant invocation',warden:'Root renewal'}[id]||move.heavy[0]:action==='hurt'?'Recoil':move[action][0],duration:action==='hurt'?320:action==='special'?1100:move[action][1]};
+}

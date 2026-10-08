@@ -1,3 +1,5 @@
+import { enemyWalk } from './enemy-art.js';
+import { SKILLS, learnedSkills, learnSkill, trainingContent } from './skills.js';
 import { registerSprites } from './frame-atlas.js';
 import { characterAppearance, ORIGINAL_GENDER, GENDERS } from './sprites.js';
 import { CINEMATIC, BACKGROUNDS, startChapter, travelWayflame } from './chapter.js';
@@ -69,7 +71,7 @@ function renderJourney(){
 }
 let idleTimer;
 function stopIdle(){clearInterval(idleTimer);}
-function startIdle(){stopIdle();app.querySelectorAll('.guarding .frame-sprite').forEach(el=>setFrame(el,2,3));let frame=0;idleTimer=setInterval(()=>{if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;frame=(frame+1)%30;app.querySelectorAll('.frame-sprite:not(.playing-frames)').forEach(el=>setFrame(el,el.closest('.guarding')?2:0,el.closest('.guarding')?3:frame%6));app.querySelectorAll('.battle-enemy:not(.playing-enemy)').forEach(el=>{const {base,columns}=ENEMY_MOVES[el.dataset.enemy];el.style.backgroundPosition=`${(frame%columns)*20}% ${base*100/11}%`;});},200);}
+function startIdle(){stopIdle();app.querySelectorAll('.guarding .frame-sprite').forEach(el=>setFrame(el,2,3));let frame=0;idleTimer=setInterval(()=>{if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;frame=(frame+1)%30;app.querySelectorAll('.frame-sprite:not(.playing-frames)').forEach(el=>setFrame(el,el.closest('.guarding')?2:0,el.closest('.guarding')?3:frame%6));app.querySelectorAll('.battle-enemy:not(.playing-enemy)').forEach(el=>{const pose=enemyWalk(el.dataset.enemy,frame*7);if(!el.classList.contains('fallen'))el.style.backgroundPosition=`${pose.frame*20}% ${pose.row*100/(Number(el.dataset.rows||12)-1)}%`;});},200);}
 function setFrame(el,row,frame){el.dataset.frame=String(frame);el.dataset.row=String(row);el.style.backgroundPosition=`${frame*20}% ${(row+Number(el.dataset.rowOffset||0))*100/(Number(el.dataset.rows||4)-1)}%`;}
 async function playFrames(el,action,duration,hold=false){
  const row={attack:1,guard:2,skill:3,potion:0}[action];el.classList.add('playing-frames');
@@ -82,6 +84,7 @@ function renderModal(){
  const dialog=app.querySelector('#game-dialog');let content;
  if(modal==='battle-tutorial'){content=`<div class="eyebrow">THE ROAD IS NO LONGER SAFE</div><h2 id="dialog-title">Choose your next move.</h2><p>Attack or use your class ability, then the enemy responds. Abilities cost focus, which recovers after each enemy phase. Your attack, guard, and ability each have their own animation.</p><p>Watch the next enemy move. Guard reduces incoming damage by 75% and restores health and focus. Potions restore up to 50 health. Press 1–4 to choose commands, or R to retreat. Rest at the courtyard fire if the road takes too much from you.</p><button class="primary-button" data-action="close">Face the creature →</button>`;}
  else if(world&&(modal==='menu'||world.chapter&&MENU_TABS.includes(modal))){if(modal!=='menu')menuTab=modal==='codex'?'lore':modal;content=pauseContent(menuTab,state,world,esc,inspectedMember||state.hero.id);}
+ else if(modal==='training'&&world?.chapter){content=trainingContent(state,esc);}
  else if(modal==='shop'&&world?.chapter){content=shopContent(state);}
  else if(modal==='codex'&&world?.chapter){content=pauseContent('lore',state,world,esc);}
  else if(modal==='character'){const c=heroStats(state.hero);content=`<div class="eyebrow">ONE SOUL. ONE CALLING.</div><h2 id="dialog-title">${esc(state.name)}<span>.</span></h2><div class="character-dialog">${sprite(c.id)}<div><h3>Level ${state.hero.level} ${c.name}</h3><p>${c.story}</p><p><b>${c.hp}</b> maximum health · <b>${c.mp}</b> focus · <b>${c.attack}</b> attack</p><p><b>${c.skill}</b> ${c.description}</p></div></div><div class="modal-footer"><span>Your class is fixed for this journey.</span><button class="primary-button" data-action="close">Return${icon('arrow',16)}</button></div>`;}
@@ -94,35 +97,35 @@ function renderModal(){
 function closeModal(){modal=null;app.querySelector('#game-dialog')?.close();}
 function openModal(type){worldView?.resetInput();modal=type;renderModal();}
 function floatingNumber(parent,value,healing=false){if(!value)return;const number=document.createElement('span');number.className=`damage-number${healing?' healing-number':''}`;number.setAttribute('aria-hidden','true');number.textContent=`${healing?'+':'−'}${value}`;parent.append(number);}
-function launchProjectile(){if(!['sorcerer','witch','gunslinger'].includes(motion.heroId)||!['attack','skill'].includes(motion.action))return;const arena=app.querySelector('.arena'),hero=app.querySelector(`[data-hero="${motion.heroId}"]`);const b=arena.getBoundingClientRect(),o=hero.getBoundingClientRect(),enemy=app.querySelector('.battle-enemy')?.getBoundingClientRect(),x=o.left-b.left+o.width*(enemy && enemy.left < o.left ? .45 : .7),y=o.top-b.top+o.height*.3;const tx=enemy?enemy.left-b.left+enemy.width*.5:b.width*.59,ty=enemy?enemy.top-b.top+enemy.height*.45:b.height*.26;const projectile=document.createElement('span');projectile.className=`move-projectile ${motion.heroId==='gunslinger'?'tracer':motion.effect==='siphon-soul'?'soul':''}`;projectile.setAttribute('aria-hidden','true');projectile.style.cssText=`left:${x}px;top:${y}px;--fx-color:${motion.color};--move-duration:${motion.duration}ms;--travel-x:${tx-x}px;--travel-y:${ty-y}px`;arena.append(projectile);}
+function launchProjectile(){if(!['sorcerer','witch','gunslinger'].includes(motion.heroId)||!['attack','skill'].includes(motion.action))return;const arena=app.querySelector('.arena'),hero=app.querySelector(`[data-hero="${motion.heroId}"]`);const b=arena.getBoundingClientRect(),o=hero.getBoundingClientRect(),enemy=app.querySelector('.battle-enemy')?.getBoundingClientRect(),x=o.left-b.left+o.width*(enemy && enemy.left < o.left ? .45 : .7),y=o.top-b.top+o.height*.3;const tx=enemy?enemy.left-b.left+enemy.width*.5:b.width*.59,ty=enemy?enemy.top-b.top+enemy.height*Number(app.querySelector('.battle-enemy')?.dataset.aimY||.7):b.height*.26;const projectile=document.createElement('span');projectile.className=`move-projectile ${motion.heroId==='gunslinger'?'tracer':motion.effect==='siphon-soul'?'soul':''}`;projectile.setAttribute('aria-hidden','true');projectile.style.cssText=`left:${x}px;top:${y}px;--fx-color:${motion.color};--move-duration:${motion.duration}ms;--travel-x:${tx-x}px;--travel-y:${ty-y}px`;arena.append(projectile);}
 async function playEnemyFrames(el,action,reduced){
  const move=enemyMove(el.dataset.enemy,action),duration=reduced?100:move.duration;
- el.classList.add('playing-enemy');el.style.setProperty('--enemy-duration',move.duration+'ms');el.dataset.move=action;el.setAttribute('aria-label',move.label);el.style.backgroundSize='600% 1200%';
- const pose=frame=>{el.dataset.frame=String(frame);el.dataset.row=String(move.row);el.style.backgroundPosition=`${frame*20}% ${move.row*100/11}%`;};
- if(reduced){pose(action==='death'?move.columns-1:2);await animationDelay(duration);}
- else{const start=performance.now();await new Promise(resolve=>{function tick(now){const progress=Math.min(1,Math.max(0,(now-start)/duration));pose(Math.min(move.columns-1,Math.floor(progress*move.columns)));if(progress<1)requestAnimationFrame(tick);else resolve();}requestAnimationFrame(tick);});}
- if(action!=='death'){el.classList.remove('playing-enemy');el.dataset.move='idle';el.style.backgroundSize='600% 1200%';el.style.backgroundPosition=`0 ${ENEMY_MOVES[el.dataset.enemy].base*100/11}%`;}
+ el.classList.add('playing-enemy');el.style.setProperty('--enemy-duration',move.duration+'ms');el.dataset.move=action;el.setAttribute('aria-label',move.label);el.style.backgroundSize=`600% ${move.rows*100}%`;
+ const pose=frame=>{el.dataset.frame=String(frame);el.dataset.row=String(move.row);el.style.backgroundPosition=`${frame*20}% ${move.row*100/(move.rows-1)}%`;};
+ if(reduced){pose(move.frames?move.frames.at(action==='death'?-1:Math.min(2,move.frames.length-1)):action==='death'?move.columns-1:2);await animationDelay(duration);}
+ else{const start=performance.now();await new Promise(resolve=>{function tick(now){const progress=Math.min(1,Math.max(0,(now-start)/duration));pose(move.frames?move.frames[Math.min(move.frames.length-1,Math.floor(progress*move.frames.length))]:Math.min(move.columns-1,Math.floor(progress*move.columns)));if(progress<1)requestAnimationFrame(tick);else resolve();}requestAnimationFrame(tick);});}
+ if(action!=='death'){el.classList.remove('playing-enemy');el.dataset.move='idle';el.style.backgroundSize=`600% ${move.rows*100}%`;el.style.backgroundPosition=`0 ${ENEMY_MOVES[el.dataset.enemy].base*100/(move.rows-1)}%`;}
 }
 async function performAction(action){
  busy=true;app.querySelector('.arena').dataset.resolving='true';app.querySelectorAll('.command').forEach(button=>button.disabled=true);await spritesReady;const current=actor(state),next=structuredClone(state),result=act(next,action);if(!result.ok){busy=false;notice=result.reason;render();return;}
- const move=characterMove(current.id,action),reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
- motion={...move,duration:reduced?120:move.duration,heroId:current.id,action};busy=true;notice='';render();launchProjectile();tone(action==='attack'&&current.id==='gunslinger'?'shot':action==='potion'?'heal':action);
+ const technique=action.startsWith('skill:')?SKILLS[action.slice(6)]:null,poseAction=technique?'skill':action,move={...characterMove(current.id,poseAction),...(technique?{label:technique.name,name:current.id+'-skill',color:['#8ee0c1','#ecb175','#b2a8ec','#efe29d'][technique.level-1]}:{})},reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ motion={...move,duration:reduced?120:move.duration,heroId:current.id,action:poseAction};busy=true;notice='';render();await spritesReady;launchProjectile();tone(poseAction==='attack'&&current.id==='gunslinger'?'shot':action==='potion'?'heal':poseAction);
  try {
-  const hero=app.querySelector(`[data-hero="${current.id}"]`),frames=playFrames(hero.querySelector('.frame-sprite'),action,motion.duration,action==='guard');
+  let recoil=Promise.resolve();const hero=app.querySelector(`[data-hero="${current.id}"]`),frames=playFrames(hero.querySelector('.frame-sprite'),poseAction,motion.duration,poseAction==='guard');
   await animationDelay(motion.duration*.55);
-  if(result.damage||result.burnDamage){tone('hit');const enemy=app.querySelector('.battle-enemy');enemy?.classList.add('enemy-hit');const hud=app.querySelector('.enemy-hud');hud.classList.add('contact');floatingNumber(hud,result.damage+result.burnDamage);hud.querySelector('.enemy-meter>span').style.width=`${next.enemy.hp/next.enemy.maxHp*100}%`;hud.querySelector('.enemy-numbers>span:last-child').innerHTML=`${next.enemy.hp}<em> / ${next.enemy.maxHp}</em>`;}
-  if(result.healed){const healed=app.querySelector(`[data-hero="${result.healTargetId||current.id}"]`);healed.classList.add('receiving-heal');floatingNumber(healed,result.healed,true);}
-  await frames;
+  if(result.damage||result.burnDamage){tone('hit');const enemy=app.querySelector('.battle-enemy');enemy?.classList.add('enemy-hit');if(enemy)recoil=playEnemyFrames(enemy,'hurt',reduced);const hud=app.querySelector('.enemy-hud');hud.classList.add('contact');floatingNumber(hud,result.damage+result.burnDamage);const contactHP=next.enemy.hp-(result.enemyHealed||0);hud.querySelector('.enemy-meter>span').style.width=`${contactHP/next.enemy.maxHp*100}%`;hud.querySelector('.enemy-numbers>span:last-child').innerHTML=`${contactHP}<em> / ${next.enemy.maxHp}</em>`;}
+  if(result.healed)for(const event of result.healEvents||[{id:result.healTargetId||current.id,amount:result.healed}]){const healed=app.querySelector(`[data-hero="${event.id}"]`);healed?.classList.add('receiving-heal');if(healed)floatingNumber(healed,event.amount,true);}
+  await Promise.all([frames,recoil]);
   const enemy=app.querySelector('.battle-enemy');enemy?.classList.remove('enemy-hit');
   if(next.enemy.hp===0&&enemy){tone('victory');await playEnemyFrames(enemy,'death',reduced);}
   else if(result.enemyDamage){
    app.querySelector('.arena').dataset.phase='enemy';hero.classList.remove('performing');
-   const hits=result.enemyHits||[{id:current.id,damage:result.enemyDamage}],action=result.heavy?'heavy':'attack',contactDelay=enemy?(reduced?50:enemyMove(enemy.dataset.enemy,action).duration*.5):0;
+   const hits=result.enemyHits||[{id:current.id,damage:result.enemyDamage}],action=result.enemyAnimation||(result.heavy?'heavy':'attack'),contactDelay=enemy?(reduced?50:enemyMove(enemy.dataset.enemy,action).duration*.5):0;
    for(const hit of hits){const target=app.querySelector(`[data-hero="${hit.id}"]`);target.style.setProperty('--hit-delay',`${contactDelay}ms`);target.classList.add('taking-hit');}
    const enemyFrames=enemy?playEnemyFrames(enemy,action,reduced):animationDelay(reduced?80:440);
    await animationDelay(contactDelay);tone(result.heavy?'heavy':'hit');
    for(const hit of hits)floatingNumber(app.querySelector(`[data-hero="${hit.id}"]`),hit.damage);
-   await enemyFrames;
+   await enemyFrames;if(result.enemyHealed){const hud=app.querySelector('.enemy-hud');hud.querySelector('.enemy-meter>span').style.width=`${next.enemy.hp/next.enemy.maxHp*100}%`;hud.querySelector('.enemy-numbers>span:last-child').innerHTML=`${next.enemy.hp}<em> / ${next.enemy.maxHp}</em>`;floatingNumber(hud,result.enemyHealed,true);await animationDelay(reduced?40:180);}
   }
   state=next;persist();
  }finally{busy=false;motion=null;render();}
@@ -133,6 +136,7 @@ async function enterWorldBattle(spawnId){
 }
 async function handle(action,element){
  if(busy&&action!=='sound')return;
+ if(action==='learned-skill'){await performAction('skill:'+element.dataset.skill);return;}
  if(['attack','skill','guard','potion'].includes(action)){await performAction(action);return;}
  switch(action){
   case 'intro-back':state.introStep='story';persist();render();break;
@@ -145,6 +149,7 @@ async function handle(action,element){
   case 'preview':{busy=true;await spritesReady;const stage=app.querySelector('.preview-stage');stage.dataset.resolving='true';app.querySelectorAll('.preview-controls button').forEach(b=>b.disabled=true);try{await playFrames(stage.querySelector('.frame-sprite'),element.dataset.move,characterMove(state.selectedClass||'knight',element.dataset.move).duration);}finally{busy=false;stage.dataset.resolving='false';app.querySelectorAll('.preview-controls button').forEach(b=>b.disabled=false);}break;}
   case 'begin':startEncounter(state);persist();tone();render();break;
   case 'descend':descend(state);persist();tone();render();break;
+  case 'learn-skill':if(learnSkill(state,world,element.dataset.member,element.dataset.skill)){persist();tone('discover');renderModal();app.querySelector('#training-status').textContent=`Learned ${SKILLS[element.dataset.skill].name}. Select it during that character’s turn.`;}break;
   case 'menu':if(world)openModal('menu');break;
   case 'menu-tab':menuTab=element.dataset.tab;modal='menu';renderModal();break;
   case 'inspect-member':inspectedMember=element.dataset.member;renderModal();break;
@@ -176,6 +181,6 @@ app.addEventListener('submit',e=>{if(e.target.id!=='name-form')return;e.preventD
 app.addEventListener('click',e=>{const button=e.target.closest('[data-action]');if(button&&!button.disabled)handle(button.dataset.action,button);});
 document.addEventListener('keydown',e=>{if(!modal&&!world?.conversation&&mode==='adventure'&&state.status==='preparing'&&['p','P','Escape'].includes(e.key)){e.preventDefault();openModal('menu');return;}
  if(state.status==='intro'&&!state.cinematicSeen&&mode==='adventure'&&e.key==='Enter'&&!e.target.closest('button')){e.preventDefault();handle('cinematic-next');return;}
- if(modal||e.ctrlKey||e.metaKey||e.altKey||e.repeat||e.target.matches('input,textarea'))return;const a={'1':'attack','2':'skill','3':'guard','4':'potion',...(mode==='adventure'?{r:'retreat',R:'retreat'}:{})}[e.key];if(a&&state.status==='battle'){e.preventDefault();handle(a);}});
+ if(modal||e.ctrlKey||e.metaKey||e.altKey||e.repeat||e.target.matches('input,textarea'))return;const a={'1':'attack','2':'skill','3':'guard','4':'potion',...(mode==='adventure'?{r:'retreat',R:'retreat'}:{})}[e.key];if(mode==='adventure'&&state.status==='battle'&&['5','6','7','8'].includes(e.key)){const technique=learnedSkills(actor(state))[Number(e.key)-5];if(technique){e.preventDefault();handle('learned-skill',{dataset:{skill:technique.id}});}return;}if(a&&state.status==='battle'){e.preventDefault();handle(a);}});
 app.addEventListener('change',async event=>{if(event.target.id!=='save-import')return;try{const file=event.target.files[0];if(!file||file.size>2_000_000)throw new Error('Choose a save file smaller than 2 MB.');const saved=migrateAdventureSave(JSON.parse(await file.text()));if(!saved)throw new Error('This file is not a valid adventure save.');closeModal();state=saved.game;world=saved.world;persist();render();}catch(error){app.querySelector('#system-status').textContent=error.message;}});
 render();

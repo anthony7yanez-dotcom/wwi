@@ -1,0 +1,30 @@
+import { partyMembers, memberName } from './companions.js';
+
+export const ALCHEMIST={id:'alchemist',map:'supply',kind:'resident',name:'Neris Vale · Alchemist',sprite:3,x:224,y:224};
+// Four lessons for each calling. Effects are explicit combat data, not menu promises.
+const lessons={
+ knight:[['Cinder Brace',8,{damage:18,partyGuard:true},'Deal 18 damage and guard every living ally for this enemy phase.'],['Crippling Edge',9,{damage:34,weak:true},'Deal 34 damage and weaken the next enemy phase by 45%.'],['Oath Pulse',12,{damage:16,partyHeal:24},'Deal 16 damage and restore 24 health to every living ally.'],['Iron Judgment',15,{damage:58,pierce:true},'Deal 58 damage, ignoring ordinary armor.']],
+ warrior:[['Searing Cleave',9,{damage:40,burn:true},'Deal 40 damage and burn for 8 damage over two enemy phases.'],['Rallying Roar',10,{damage:26,partyFocus:5},'Deal 26 damage and restore 5 focus to each living ally.'],['Armor Ripper',12,{damage:48,breakArmor:true},'Deal 48 damage and strip ordinary armor for two enemy phases.'],['Crimson Execution',18,{damage:72},'Deal 72 damage with a punishing axe strike.']],
+ paladin:[['Pilgrim’s Balm',10,{partyHeal:32},'Restore 32 health to every living ally.'],['Aureate Lance',11,{damage:44,weak:true},'Deal 44 damage and weaken the next enemy phase by 45%.'],['Sunward Vow',12,{damage:18,partyGuard:true},'Deal 18 damage and guard every living ally for this enemy phase.'],['Dawn Renewal',18,{damage:38,partyHeal:24},'Deal 38 damage and restore 24 health to every living ally.']],
+ sorcerer:[['Rime Bolt',9,{damage:36,weak:true},'Deal 36 damage and weaken the next enemy phase by 45%.'],['Cinder Torrent',12,{damage:48,burn:true},'Deal 48 damage and burn for 8 damage over two enemy phases.'],['Prism Lance',14,{damage:62,pierce:true},'Deal 62 damage, ignoring ordinary armor.'],['Arcane Confluence',16,{damage:40,partyFocus:6},'Deal 40 damage and restore 6 focus to each living ally.']],
+ witch:[['Bitter Hex',8,{damage:26,weak:true},'Deal 26 damage and weaken the next enemy phase by 45%.'],['Night Harvest',11,{damage:38,heal:32},'Drain 38 health from the enemy and restore 32 of your own.'],['Withering Name',12,{damage:32,breakArmor:true,burn:true},'Deal 32 damage, burn, and strip ordinary armor for two enemy phases.'],['Moonwell Pact',17,{damage:24,partyHeal:28},'Deal 24 damage and restore 28 health to every living ally.']],
+ gunslinger:[['Incendiary Round',9,{damage:38,burn:true},'Deal 38 damage and burn for 8 damage over two enemy phases.'],['Pinning Shot',10,{damage:40,weak:true},'Deal 40 damage and weaken the next enemy phase by 45%.'],['Mercury Round',13,{damage:60,pierce:true},'Deal 60 damage, ignoring ordinary armor.'],['Covering Volley',15,{damage:34,partyGuard:true},'Deal 34 damage and guard every living ally for this enemy phase.']],
+ monk:[['Ember Palm',8,{damage:34,burn:true},'Deal 34 damage and burn for 8 damage over two enemy phases.'],['Stillwater Breath',10,{partyHeal:24,partyFocus:4},'Restore 24 health and 4 focus to every living ally.'],['Mountain Breaker',12,{damage:48,breakArmor:true},'Deal 48 damage and strip ordinary armor for two enemy phases.'],['Lotus Reversal',16,{damage:42,heal:30,weak:true},'Deal 42 damage, restore 30 of your health, and weaken the next enemy phase by 45%.']],
+};
+export const CLASS_SKILLS=Object.fromEntries(Object.entries(lessons).map(([classId,list])=>[classId,list.map(([name,cost,effects,description],i)=>({id:`${classId}-lesson-${i+1}`,classId,name,cost,effects,description,level:i+1,price:[0,25,40,60][i]}))]));
+export const SKILLS=Object.fromEntries(Object.values(CLASS_SKILLS).flat().map(s=>[s.id,s]));
+export function learnedSkills(member){return (member?.skills||[]).map(id=>SKILLS[id]).filter(Boolean);}
+export function validSkills(member){return member.skills===undefined||Array.isArray(member.skills)&&member.skills.length<=4&&new Set(member.skills).size===member.skills.length&&member.skills.every(id=>SKILLS[id]?.classId===member.id&&member.level>=SKILLS[id].level);}
+export function trainingReason(game,member,skill){
+ if(game.status!=='preparing'||!member||skill?.classId!==member.id)return 'Choose a class in your recruited roster.';
+ if(member.skills?.includes(skill.id))return 'Already learned';
+ if(member.level<skill.level)return `Requires level ${skill.level}`;
+ const previous=CLASS_SKILLS[member.id][skill.level-2];if(previous&&!member.skills?.includes(previous.id))return `Learn ${previous.name} first`;
+ if(game.gold<skill.price)return `Needs ${skill.price} gold`;
+ return null;
+}
+export function learnSkill(game,world,memberId,id){const member=partyMembers(game).find(h=>h.id===memberId),skill=SKILLS[id];
+ if(!world?.chapter||world.map!==ALCHEMIST.map||world.conversation||world.battle||Math.hypot(world.x-ALCHEMIST.x,world.y-ALCHEMIST.y)>58||trainingReason(game,member,skill))return false;
+ member.skills??=[];member.skills.push(id);game.gold-=skill.price;return true;
+}
+export function trainingContent(game,esc){return `<div class="eyebrow">NERIS VALE · THE PRACTICAL ART</div><h2 id="dialog-title">A lesson worth carrying.</h2><p>I once distilled ward medicine. Now I teach people to turn the same principles toward protection. Your calling decides the technique; practice decides when you are ready.</p><p>${game.gold} gold · First lesson free. Further lessons unlock at levels 2, 3, and 4. Recruited reserves can learn too.</p><div class="lesson-grid">${partyMembers(game).map(h=>`<section><h3>${esc(memberName(game,h))} · ${h.id}</h3>${CLASS_SKILLS[h.id].map(s=>{const reason=trainingReason(game,h,s);return `<article class="menu-entry"><h4>${s.name}</h4><p>${s.description} Damage grows by 4 per level.</p><small>${s.cost} focus · Level ${s.level} · ${s.price} gold</small><button data-action="learn-skill" data-member="${h.id}" data-skill="${s.id}" ${reason?'disabled':''}>${reason||'Learn technique'}</button></article>`;}).join('')}</section>`).join('')}</div><p id="training-status" role="status"></p><div class="modal-footer"><span>Lessons remain with each character in your save.</span><button class="primary-button" data-action="close">Return</button></div>`;}

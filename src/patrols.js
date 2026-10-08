@@ -1,5 +1,10 @@
 // Authored loops stay within the open roads; positions are derived from saved distance.
 export const PATROLS = {
+ 'hollows-skeleton':{speed:24,points:[[304,336],[368,336],[368,400],[304,400]]},
+ 'hollows-succubus':{speed:26,points:[[624,240],[688,240],[688,304],[624,304]]},
+ 'greyfen-ogre':{speed:18,points:[[608,336],[608,368],[640,368],[640,336]]},
+ 'greyfen-undead':{speed:15,points:[[352,240],[400,240],[400,272],[352,272]]},
+ 'beacon-vampire':{speed:32,points:[[624,336],[688,336],[688,400],[624,400]]},
  'greyfen-wolf':{speed:29,points:[[352,336],[432,336],[432,368],[352,368]]},
  'greyfen-fanatic':{speed:22,points:[[672,272],[752,272],[752,304],[672,304]]},
  'hollows-fanatic':{speed:23,points:[[480,336],[560,336],[560,400],[480,400]]},

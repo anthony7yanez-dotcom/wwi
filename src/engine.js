@@ -1,3 +1,4 @@
+import { SKILLS, validSkills } from './skills.js';
 import { GENDERS, ORIGINAL_GENDER } from './sprites.js';
 import { REGION_ENCOUNTERS } from './encounters.js';
 import { activeParty, partyMembers, memberName } from './companions.js';
@@ -46,19 +47,20 @@ export function setActiveMember(state,id){
   return true;
 }
 export function actor(state) { return state.status!=='battle'?null:state.campaign==='adventure'?activeParty(state).find(h=>h.hp>0&&!state.acted.includes(h.id))||null:state.hero.hp>0?state.hero:null; }
-export function encounterHP(state){return Math.round(currentEncounter(state).hp*(state.campaign==='adventure'?1+.7*((state.battleSize||activeParty(state).length)-1):1));}
+export function encounterHP(state){return Math.round(currentEncounter(state).hp*(state.campaign==='adventure'?1+.7*((state.battleSize||activeParty(state).length)-1):1)*(state.battleRules===2?1.12:1));}
 export function currentEncounter(state) { return state.encounterId ? REGION_ENCOUNTERS[state.encounterId] : ENCOUNTERS[state.depth]; }
 export function log(state,text,type='normal') { state.log.push({text,type});if(state.log.length>80) state.log.shift(); }
 export function enemyIntent(state) {
   const e=currentEncounter(state),enraged=Boolean(e.boss&&state.enemy&&state.enemy.hp<=state.enemy.maxHp/2),heavy=state.round%(enraged?2:e.heavyEvery||3)===0,shell=Boolean(e.thornShell?!state.enemy?.thornBroken:e.boss&&state.round%4===0);
-  return {heavy,shell,enraged,name:heavy?(e.heavyIntent||'Devastating pulse'):e.intent,damage:Math.round(e.attack*(heavy?(e.heavyMultiplier||1.6):1)*(state.campaign==='adventure'?1+.35*((state.battleSize||1)-1):1)),description:e.thornShell&&shell?'Thorn shell: chain two different class abilities in one round to break it. Guard before Thornstorm.':shell?'Stone carapace: basic attacks deal 40% less damage this turn. Use an ability.':heavy?'A heavy strike is coming. Guard to absorb it.':enraged?'The warden is enraged. Heavy attacks come every second round.':'The enemy prepares a direct strike.'};
+  const special=state.battleRules===2&&!heavy&&state.round%4===0&&['wolf','sentinel','warden'].includes(e.sprite);
+  return {heavy,shell,enraged,special,animation:special?'special':heavy?'heavy':'attack',name:special?{wolf:'Crimson howl',sentinel:'Covenant invocation',warden:'Root renewal'}[e.sprite]:heavy?(e.heavyIntent||'Devastating pulse'):e.intent,damage:Math.round(e.attack*(heavy?(e.heavyMultiplier||1.6):1)*(state.campaign==='adventure'?1+.35*((state.battleSize||1)-1):1)*(state.battleRules===2?1.15:1)*(special?1.1:1)),description:special?e.sprite==='sentinel'?'An invocation will drain 2 focus unless you guard.':e.sprite==='warden'?(e.thornShell?'Thorn shell: chain two different class abilities. Roots restore 8 health unless burning.':shell?'Stone carapace: basic attacks deal 40% less damage. Roots restore 8 health unless burning.':'The roots restore 8 health unless burning.'):'The wolf howls before a stronger strike.':e.armor&&!state.enemy?.armorBreak?'Rusted armor reduces damage by 22%. Use piercing or armor-breaking techniques.':e.regen?'Regenerates 9 health unless burning.':e.drainFocus?'A heavy curse drains 4 focus unless guarded.':e.lifeSteal?'Heavy siphons restore health from damage dealt. Guard to deny it.':e.sweep?'Its heavy crush hits every living ally. Guard across the party.':e.thornShell&&shell?'Thorn shell: chain two different class abilities in one round to break it. Guard before Thornstorm.':shell?'Stone carapace: basic attacks deal 40% less damage this turn. Use an ability.':heavy?'A heavy strike is coming. Guard to absorb it.':enraged?'The warden is enraged. Heavy attacks come every second round.':'The enemy prepares a direct strike.'};
 }
 export function startEncounter(state,encounterId=null) {
   if(state.status!=='preparing'||!state.hero) return false;
   if(encounterId!==null&&(!REGION_ENCOUNTERS[encounterId]||state.campaign!=='adventure'))return false;
   if(encounterId!==null)state.encounterId=encounterId;
-  if(state.campaign==='adventure'){state.battleSize=activeParty(state).length;state.acted=[];activeParty(state).forEach(h=>h.guard=false);}
-  const e=currentEncounter(state),hp=encounterHP(state); state.enemy={hp,maxHp:hp,burn:0,weak:false,...(e.thornShell?{combo:[],thornBroken:false}:{})};
+  if(state.campaign==='adventure'){state.battleSize=activeParty(state).length;state.battleRules=2;state.partyWard=false;state.acted=[];activeParty(state).forEach(h=>h.guard=false);}
+  const e=currentEncounter(state),hp=encounterHP(state); state.enemy={hp,maxHp:hp,burn:0,weak:false,...(state.battleRules===2?{armorBreak:0}:{}),...(e.thornShell?{combo:[],thornBroken:false}:{})};
   state.status='battle';state.round=1;state.hero.guard=false;
   log(state,`${e.enemy} awakens. You act first.`,'story');return true;
 }
@@ -114,17 +116,18 @@ export function act(state,action,rng=Math.random) {
 export function woundedMember(state){return activeParty(state).filter(h=>h.hp<heroStats(h).hp).sort((a,b)=>a.hp/heroStats(a).hp-b.hp/heroStats(b).hp)[0]||null;}
 function partyAction(state,action,rng){
   const hero=actor(state);if(!hero)return {ok:false,reason:'It is not your turn.'};
-  const cls=heroStats(hero),target=woundedMember(state),intent=enemyIntent(state);
-  if(!['attack','skill','guard','potion'].includes(action))return {ok:false,reason:'Unknown action.'};
-  if(action==='skill'&&hero.mp<cls.cost)return {ok:false,reason:'Not enough focus.'};
+  const cls=heroStats(hero),target=woundedMember(state),intent=enemyIntent(state),learned=typeof action==='string'&&action.startsWith('skill:')?SKILLS[action.slice(6)]:null,isSkill=action==='skill'||Boolean(learned),encounter=currentEncounter(state);
+  if(action?.startsWith('skill:')&&(!learned||learned.classId!==hero.id||!hero.skills?.includes(learned.id)))return {ok:false,reason:'This character has not learned that technique.'};
+  if(!isSkill&&!['attack','guard','potion'].includes(action))return {ok:false,reason:'Unknown action.'};
+  if(isSkill&&hero.mp<(learned?.cost||cls.cost))return {ok:false,reason:'Not enough focus.'};
   if(action==='potion'&&(!state.potions||!target))return {ok:false,reason:!state.potions?'No potions left.':'Everyone is at full health.'};
-  const result={ok:true,actorId:hero.id,damage:0,healed:0,burnDamage:0,enemyDamage:0,enemyHits:[],heavy:intent.heavy};
-  const heal=(member,amount)=>{const restored=Math.min(amount,heroStats(member).hp-member.hp);member.hp+=restored;result.healed+=restored;result.healTargetId=member.id;};
+  const result={ok:true,actorId:hero.id,damage:0,healed:0,burnDamage:0,enemyDamage:0,enemyHealthDamage:0,enemyHits:[],healEvents:[],heavy:intent.heavy,enemyAnimation:intent.animation};
+  const heal=(member,amount)=>{const restored=Math.min(amount,heroStats(member).hp-member.hp);member.hp+=restored;result.healed+=restored;result.healTargetId=member.id;result.healEvents.push({id:member.id,amount:restored});};
   hero.guard=false;
   if(action==='attack'){result.damage=Math.round((cls.attack+Math.floor(rng()*5))*(intent.shell?.6:1));}
   if(action==='guard'){hero.guard=true;hero.mp=Math.min(cls.mp,hero.mp+5);heal(hero,8);}
   if(action==='potion'){state.potions--;heal(target,50);}
-  if(action==='skill'){
+  if(isSkill&&!learned){
     hero.mp-=cls.cost;const growth=(hero.level-1)*4;
     switch(hero.id){
       case 'knight':result.damage=30+growth;state.enemy.weak=true;break;
@@ -136,16 +139,29 @@ function partyAction(state,action,rng){
       case 'monk':result.damage=28+growth;heal(hero,20);activeParty(state).forEach(h=>h.mp=Math.min(heroStats(h).mp,h.mp+3));break;
     }
   }
-  if(currentEncounter(state).thornShell&&action==='skill'){state.enemy.combo.push(hero.id);if(new Set(state.enemy.combo).size>=2){state.enemy.thornBroken=true;result.shellBroken=true;log(state,'Two callings answer together. The thorn shell breaks for this round.','story');}else result.damage=Math.round(result.damage*.6);}
-  log(state,`${memberName(state,hero)}: ${action==='skill'?cls.skill:action}${result.damage?`, ${result.damage} damage`:''}${result.healed?`, +${result.healed} health to ${memberName(state,partyMembers(state).find(h=>h.id===result.healTargetId))}`:''}.`,result.damage?'damage':'heal');
+  if(learned){
+    hero.mp-=learned.cost;const fx=learned.effects,growth=(hero.level-1)*4;result.damage=fx.damage?fx.damage+growth:0;
+    if(fx.heal)heal(hero,fx.heal);if(fx.partyHeal)result.partyHealed=true;if(fx.partyHeal)activeParty(state).filter(h=>h.hp>0).forEach(h=>heal(h,fx.partyHeal));
+    if(fx.weak)state.enemy.weak=true;if(fx.burn)state.enemy.burn=2;if(fx.breakArmor)state.enemy.armorBreak=2;
+    if(fx.partyGuard){state.partyWard=true;result.partyProtected=true;}
+    if(fx.partyFocus){for(const h of activeParty(state).filter(h=>h.hp>0))h.mp=Math.min(heroStats(h).mp,h.mp+fx.partyFocus);result.focusRestored=fx.partyFocus;}
+    result.skillId=learned.id;
+  }
+  if(encounter.armor&&!state.enemy.armorBreak&&!learned?.effects.pierce)result.damage=Math.round(result.damage*(1-encounter.armor));
+  if(currentEncounter(state).thornShell&&isSkill){state.enemy.combo.push(hero.id);if(new Set(state.enemy.combo).size>=2){state.enemy.thornBroken=true;result.shellBroken=true;log(state,'Two callings answer together. The thorn shell breaks for this round.','story');}else result.damage=Math.round(result.damage*.6);}
+  log(state,`${memberName(state,hero)}: ${isSkill?learned?.name||cls.skill:action}${result.damage?`, ${result.damage} damage`:''}${result.healed?`, +${result.healed} health ${result.partyHealed?'across the party':'to '+memberName(state,partyMembers(state).find(h=>h.id===result.healTargetId))}`:''}${result.focusRestored?`, +${result.focusRestored} party focus`:''}${result.partyProtected?', party guarded':''}.`,result.damage?'damage':'heal');
   state.enemy.hp=Math.max(0,state.enemy.hp-result.damage);state.acted.push(hero.id);
   if(!state.enemy.hp){win(state);return result;}
   if(actor(state))return result; // Every living member commands a move before the enemy responds.
+  const burning=state.enemy.burn>0;
   if(state.enemy.burn>0){result.burnDamage=Math.min(8,state.enemy.hp);state.enemy.hp-=result.burnDamage;state.enemy.burn--;log(state,`Soulfire burns for ${result.burnDamage} damage.`,'damage');}
   if(!state.enemy.hp){win(state);return result;}
   const living=activeParty(state).filter(h=>h.hp>0),boss=currentEncounter(state).boss;
-  const targets=boss&&intent.heavy?living:[living[Math.min(living.length-1,Math.floor(rng()*living.length))]];
-  for(const member of targets){const damage=Math.max(1,Math.round((intent.damage+Math.floor(rng()*3))*(state.enemy.weak?.55:1)*(member.guard?.25:1))-heroStats(member).defense);member.hp=Math.max(0,member.hp-damage);result.enemyHits.push({id:member.id,damage});result.enemyDamage+=damage;log(state,`${intent.name}: ${memberName(state,member)} takes ${damage} damage.`,'enemy');}
+  const targets=(boss||encounter.sweep)&&intent.heavy?living:[living[Math.min(living.length-1,Math.floor(rng()*living.length))]];
+  for(const member of targets){const damage=Math.max(1,Math.round((intent.damage+Math.floor(rng()*3))*(state.enemy.weak?.55:1)*((member.guard||state.partyWard)?.25:1))-heroStats(member).defense);result.enemyHealthDamage+=Math.min(member.hp,damage);member.hp=Math.max(0,member.hp-damage);result.enemyHits.push({id:member.id,damage});result.enemyDamage+=damage;const drain=intent.heavy?encounter.drainFocus||0:intent.special&&encounter.sprite==='sentinel'?2:0;if(drain&&!member.guard&&!state.partyWard){member.mp=Math.max(0,member.mp-drain);log(state,`${memberName(state,member)} loses ${drain} focus.`,'enemy');}log(state,`${intent.name}: ${memberName(state,member)} takes ${damage} damage.`,'enemy');}
+  if(intent.heavy&&encounter.lifeSteal){result.enemyHealed=Math.min(state.enemy.maxHp-state.enemy.hp,Math.round(result.enemyHealthDamage*encounter.lifeSteal));state.enemy.hp+=result.enemyHealed;if(result.enemyHealed)log(state,`${encounter.enemy} siphons ${result.enemyHealed} health.`,'enemy');}
+  const regen=!burning?(encounter.regen||0)+(intent.special&&encounter.sprite==='warden'?8:0):0;if(regen){result.enemyHealed=(result.enemyHealed||0)+Math.min(regen,state.enemy.maxHp-state.enemy.hp);const restored=Math.min(regen,state.enemy.maxHp-state.enemy.hp);state.enemy.hp+=restored;log(state,`${encounter.enemy} regenerates ${restored} health. Burning prevents renewal.`,'enemy');}
+  if(state.enemy.armorBreak>0)state.enemy.armorBreak--;state.partyWard=false;
   state.enemy.weak=false;state.acted=[];if(currentEncounter(state).thornShell){state.enemy.combo=[];state.enemy.thornBroken=false;}
   if(activeParty(state).every(h=>!h.hp)){state.status='defeat';log(state,'The party’s lights fade. The road will have to wait.','enemy');return result;}
   state.round++;activeParty(state).forEach(h=>{h.guard=false;if(h.hp)h.mp=Math.min(heroStats(h).mp,h.mp+heroStats(h).focusRecovery);});return result;
@@ -163,6 +179,7 @@ export function validSave(s) {
   if(!s||s.version!==2||!['intro','preparing','battle','victory','complete','defeat'].includes(s.status)||typeof s.name!=='string'||s.name!==cleanName(s.name)||!Number.isInteger(s.depth)||s.depth<0||s.depth>2||!Number.isInteger(s.round)||s.round<1||!Number.isInteger(s.gold)||s.gold<0||!Number.isInteger(s.potions)||s.potions<0||!Array.isArray(s.log)||s.log.length>80||!s.log.every(l=>typeof l.text==='string'&&typeof l.type==='string')) return false;
   if(s.selectedGender!==undefined&&!GENDERS.includes(s.selectedGender)||s.hero?.gender!==undefined&&!GENDERS.includes(s.hero.gender))return false;
   const adventure=s.campaign==='adventure';
+  if(![undefined,2].includes(s.battleRules)||![undefined,true,false].includes(s.partyWard))return false;
   if(s.campaign!==undefined&&!adventure)return false;
   if(s.encounterId!=null&&(!adventure||!Object.hasOwn(REGION_ENCOUNTERS,s.encounterId)))return false;
   if(adventure&&(!Number.isInteger(s.xp)||s.xp<0||s.depth!==0||s.status==='complete'))return false;
@@ -173,10 +190,11 @@ export function validSave(s) {
     if(!Array.isArray(s.companions)||s.companions.length>6||!Array.isArray(s.activeIds)||s.activeIds.length<1||s.activeIds.length>4||s.activeIds[0]!==h.id||new Set(s.activeIds).size!==s.activeIds.length||!Array.isArray(s.acted)||new Set(s.acted).size!==s.acted.length)return false;
     const roster=partyMembers(s);if(new Set(roster.map(m=>m?.id)).size!==roster.length||!s.activeIds.every(id=>roster.some(m=>m?.id===id))||!s.acted.every(id=>s.activeIds.includes(id)))return false;
     if(!s.companions.every(m=>m&&CLASSES.some(c=>c.id===m.id)&&m.level===h.level&&typeof m.guard==='boolean'&&Number.isFinite(m.hp)&&m.hp>=0&&m.hp<=heroStats(m).hp&&Number.isFinite(m.mp)&&m.mp>=0&&m.mp<=heroStats(m).mp))return false;
-    if(!validInventory(s))return false;
+    if(!validInventory(s)||!roster.every(validSkills))return false;
     if(s.status==='preparing'&&s.acted.length)return false;
     if(s.status!=='preparing'&&(!Number.isInteger(s.battleSize)||s.battleSize!==s.activeIds.length))return false;
   }
+  if(s.enemy?.armorBreak!==undefined&&(!Number.isInteger(s.enemy.armorBreak)||s.enemy.armorBreak<0||s.enemy.armorBreak>2))return false;
   if(s.enemy&&REGION_ENCOUNTERS[s.encounterId]?.thornShell&&(!Array.isArray(s.enemy.combo)||s.enemy.combo.length>4||new Set(s.enemy.combo).size!==s.enemy.combo.length||!s.enemy.combo.every(id=>s.acted.includes(id))||typeof s.enemy.thornBroken!=='boolean'||s.enemy.thornBroken!==(s.enemy.combo.length>=2)))return false;
   const stats=heroStats(h);
   if(!Number.isFinite(h.hp)||h.hp<0||h.hp>stats.hp||!Number.isFinite(h.mp)||h.mp<0||h.mp>stats.mp) return false;

@@ -1,3 +1,4 @@
+import { ENEMY_VISUALS } from './enemy-art.js';
 // Atlas registration is a renderer concern: original artwork remains untouched.
 // Generated sheets have uneven row spacing; fixed fractions can cut off feet
 // or leak pixels from the next action into the current one.
@@ -51,7 +52,7 @@ export function registerSprites(root){const pending=[];
  for(const el of root.querySelectorAll('.frame-sprite,.battle-enemy')){
   const enemy=el.classList.contains('battle-enemy');if(enemy&&!el.closest('.party-arena'))continue;
   const url=getComputedStyle(el).backgroundImage.match(/^url\(["']?(.*?)["']?\)$/)?.[1];if(!url)continue;
-  const rows=enemy?12:Number(el.dataset.rows||4);pending.push(registeredSheet(url,6,rows,enemy).then(value=>{if(!el.isConnected)return;el.style.backgroundImage=`url("${value}")`;if(enemy)el.style.backgroundSize='600% 1200%';el.dataset.registered='true';}).catch(()=>{el.dataset.registered='false';}));
+  const rows=Number(el.dataset.rows||(enemy?12:4));pending.push(registeredSheet(url,6,rows,enemy&&rows===12).then(async value=>{if(!el.isConnected)return;el.style.backgroundImage=`url("${value}")`;if(enemy){el.style.backgroundSize=`600% ${rows*100}%`;const v=ENEMY_VISUALS[el.dataset.enemy],img=new Image();img.src=value;await img.decode();const cell=img.width/6,sample=document.createElement('canvas');sample.width=sample.height=cell;const sc=sample.getContext('2d',{willReadFrequently:true});sc.drawImage(img,0,v.base*cell,cell,cell,0,0,cell,cell);const body=silhouette(sc.getImageData(0,0,cell,cell).data,cell,cell);el.style.setProperty('--enemy-size',`${v.battleHeight*cell/(body.bottom-body.top)}px`);el.dataset.aimY=String(.94-(body.bottom-body.top)/cell/2);el.dataset.bodyHeight=String(v.battleHeight);}el.dataset.registered='true';}).catch(()=>{el.dataset.registered='false';}));
  }
  return Promise.all(pending);
 }
