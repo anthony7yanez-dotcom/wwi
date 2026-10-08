@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CLASSES, createGame } from '../src/engine.js';
+import { CLASSES, createGame, initializeAdventure } from '../src/engine.js';
 import { MAPS, WALK_SPEED, createWorld, canStand, moveWorld, nearbyObject, interactWorld, finishWorldDialogue, questInfo, validWorld, validAdventureSave } from '../src/world.js';
 
 function standNear(world,id){const object=MAPS[world.map].objects.find(o=>o.id===id);world.x=object.x;world.y=object.y+32;assert.ok(canStand(world,world.x,world.y));return object;}
@@ -42,7 +42,7 @@ test('quest acceptance and gate activation happen at the final dialogue choice',
   finishWorldDialogue(w,lever.finish);assert.equal(w.flags.gate,true);assert.equal(questInfo(w).step,2);
 });
 test('every class can finish the local quest and keep its class identity',()=>{
-  for(const c of CLASSES){const g=createGame(c.id,'Ash'),w=createWorld();
+  for(const c of CLASSES){const g=initializeAdventure(createGame(c.id,'Ash')),w=createWorld();
     standNear(w,'caretaker');finishWorldDialogue(w,interactWorld(w,g).finish);
     standNear(w,'traveler');finishWorldDialogue(w,interactWorld(w,g).finish);
     standNear(w,'chest');interactWorld(w,g);
@@ -50,13 +50,13 @@ test('every class can finish the local quest and keep its class identity',()=>{
     standNear(w,'ward');interactWorld(w,g);assert.equal(questInfo(w).step,3);
     w.map='courtyard';standNear(w,'caretaker');finishWorldDialogue(w,interactWorld(w,g).finish);
     assert.equal(questInfo(w).complete,true);assert.equal(g.hero.id,c.id);assert.equal(g.potions,5);
-    assert.ok(validAdventureSave({version:1,game:g,world:w}));
+    assert.ok(validAdventureSave({version:2,game:g,world:w}));
   }
 });
 test('save validation rejects invalid positions, broken flags and malformed conversation state',()=>{
-  const game=createGame('monk'),world=createWorld(),save={version:1,game,world};assert.ok(validAdventureSave(save));
+  const game=initializeAdventure(createGame('monk')),world=createWorld(),save={version:2,game,world};assert.ok(validAdventureSave(save));
   for(const mutate of [w=>w.x=NaN,w=>w.x=10000,w=>w.map='missing',w=>w.flags.gate='yes',w=>w.flags.ward=true,w=>w.visited=['approach'],w=>w.conversation={id:'caretaker',page:99}]){const invalid=structuredClone(save);mutate(invalid.world);assert.equal(validAdventureSave(invalid),false);}
   standNear(world,'caretaker');world.conversation={...interactWorld(world,game),page:1};assert.ok(validAdventureSave(save));
   const restored=JSON.parse(JSON.stringify(save));assert.equal(restored.world.conversation.page,1);assert.equal(restored.world.conversation.finish,'accept');
-  assert.ok(validAdventureSave({version:1,game:createGame(),world:null}));assert.equal(validAdventureSave({version:1,game:createGame(),world}),false);
+  assert.ok(validAdventureSave({version:2,game:createGame(),world:null}));assert.equal(validAdventureSave({version:2,game:createGame(),world}),false);
 });

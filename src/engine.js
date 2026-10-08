@@ -1,3 +1,6 @@
+import { REGION_ENCOUNTERS } from './encounters.js';
+import { activeParty, partyMembers, memberName } from './companions.js';
+
 export const CLASSES = [
   { id:'knight', name:'Knight', title:'The oathkeeper', role:'Vanguard', hp:145, mp:28, attack:21, skill:'Shield bash', cost:7, description:'Deal 30 damage and weaken the next enemy strike by 45%.', color:'#91acaf', icon:'shield', story:'You swore an oath when the world still had a sun. The steel remembers, even if you do not.' },
   { id:'warrior', name:'Warrior', title:'The bloodbound', role:'Brute', hp:140, mp:28, attack:26, skill:'Rending axe', cost:8, description:'Deliver a devastating axe strike for 44 damage.', color:'#bf7366', icon:'axe', story:'The dark took everything you loved. You have come to collect its debt.' },
@@ -33,34 +36,48 @@ export function chooseClass(state,classId) {
   log(state,`${state.name}, the ${cls.name.toLowerCase()}, stands alone at the mouth of the Hollow.`,'story');
   return true;
 }
-export function actor(state) { return state.status==='battle' && state.hero.hp>0 ? state.hero : null; }
+export function initializeAdventure(state){state.campaign='adventure';state.xp??=0;state.encounterId=null;state.companions??=[];state.activeIds??=[state.hero.id];state.acted=[];return state;}
+export function setActiveMember(state,id){
+  if(state.status!=='preparing'||id===state.hero.id||!partyMembers(state).some(h=>h.id===id))return false;
+  if(state.activeIds.includes(id))state.activeIds=state.activeIds.filter(value=>value!==id);
+  else {if(state.activeIds.length>=4)return false;state.activeIds.push(id);}
+  return true;
+}
+export function actor(state) { return state.status!=='battle'?null:state.campaign==='adventure'?activeParty(state).find(h=>h.hp>0&&!state.acted.includes(h.id))||null:state.hero.hp>0?state.hero:null; }
+export function encounterHP(state){return Math.round(currentEncounter(state).hp*(state.campaign==='adventure'?1+.7*((state.battleSize||activeParty(state).length)-1):1));}
+export function currentEncounter(state) { return state.encounterId ? REGION_ENCOUNTERS[state.encounterId] : ENCOUNTERS[state.depth]; }
 export function log(state,text,type='normal') { state.log.push({text,type});if(state.log.length>80) state.log.shift(); }
 export function enemyIntent(state) {
-  const e=ENCOUNTERS[state.depth],heavy=state.round%3===0;
-  return {heavy,name:heavy?'Devastating pulse':e.intent,damage:Math.round(e.attack*(heavy?1.6:1)),description:heavy?'A heavy strike is coming. Guard to absorb it.':'The watcher prepares a direct strike.'};
+  const e=currentEncounter(state),enraged=Boolean(e.boss&&state.enemy&&state.enemy.hp<=state.enemy.maxHp/2),heavy=state.round%(enraged?2:e.heavyEvery||3)===0,shell=Boolean(e.boss&&state.round%4===0);
+  return {heavy,shell,enraged,name:heavy?(e.heavyIntent||'Devastating pulse'):e.intent,damage:Math.round(e.attack*(heavy?(e.heavyMultiplier||1.6):1)*(state.campaign==='adventure'?1+.35*((state.battleSize||1)-1):1)),description:shell?'Stone carapace: basic attacks deal 40% less damage this turn. Use an ability.':heavy?'A heavy strike is coming. Guard to absorb it.':enraged?'The warden is enraged. Heavy attacks come every second round.':'The enemy prepares a direct strike.'};
 }
-export function startEncounter(state) {
+export function startEncounter(state,encounterId=null) {
   if(state.status!=='preparing'||!state.hero) return false;
-  const e=ENCOUNTERS[state.depth]; state.enemy={hp:e.hp,maxHp:e.hp,burn:0,weak:false};
+  if(encounterId!==null&&(!REGION_ENCOUNTERS[encounterId]||state.campaign!=='adventure'))return false;
+  if(encounterId!==null)state.encounterId=encounterId;
+  if(state.campaign==='adventure'){state.battleSize=activeParty(state).length;state.acted=[];activeParty(state).forEach(h=>h.guard=false);}
+  const e=currentEncounter(state),hp=encounterHP(state); state.enemy={hp,maxHp:hp,burn:0,weak:false};
   state.status='battle';state.round=1;state.hero.guard=false;
   log(state,`${e.enemy} awakens. You act first.`,'story');return true;
 }
 function win(state) {
-  const e=ENCOUNTERS[state.depth];state.gold+=e.reward;
-  state.status=state.depth===2?'complete':'victory';
+  const e=currentEncounter(state);state.gold+=e.reward;
+  state.status=state.campaign==='adventure'?'victory':state.depth===2?'complete':'victory';
   log(state,`${e.enemy} falls. +${e.reward} gold.`,'heal');
 }
 export function act(state,action,rng=Math.random) {
+  if(state.campaign==='adventure')return partyAction(state,action,rng);
   const hero=actor(state);
   if(!hero) return {ok:false,reason:'It is not your turn.'};
   const cls=heroStats(hero);
   if(!['attack','skill','guard','potion'].includes(action)) return {ok:false,reason:'Unknown action.'};
   if(action==='skill'&&hero.mp<cls.cost) return {ok:false,reason:'Not enough focus.'};
   if(action==='potion'&&(state.potions===0||hero.hp===cls.hp)) return {ok:false,reason:state.potions===0?'No potions left.':'Health is already full.'};
-  const result={ok:true,damage:0,healed:0,burnDamage:0,enemyDamage:0,heavy:state.round%3===0};
+  const intent=enemyIntent(state);
+  const result={ok:true,damage:0,healed:0,burnDamage:0,enemyDamage:0,heavy:intent.heavy};
   const heal=amount=>{const restored=Math.min(amount,cls.hp-hero.hp);hero.hp+=restored;result.healed+=restored;};
   hero.guard=false;
-  if(action==='attack') { result.damage=cls.attack+Math.floor(rng()*5);log(state,`${cls.name} attacks for ${result.damage} damage.`,'damage'); }
+  if(action==='attack') { result.damage=Math.round((cls.attack+Math.floor(rng()*5))*(intent.shell?.6:1));log(state,`${cls.name} attacks for ${result.damage} damage${intent.shell?' against the stone carapace':''}.`,'damage'); }
   if(action==='guard') {hero.guard=true;hero.mp=Math.min(cls.mp,hero.mp+5);heal(8);log(state,'You brace: 75% less damage, +5 focus, and +8 health.');}
   if(action==='potion') {state.potions--;heal(50);log(state,`You drink a potion. +${result.healed} health.`,'heal');}
   if(action==='skill') {
@@ -84,7 +101,6 @@ export function act(state,action,rng=Math.random) {
     log(state,`Soulfire burns for ${result.burnDamage} damage.`,'damage');
   }
   if(!state.enemy.hp) {win(state);return result;}
-  const intent=enemyIntent(state);
   result.enemyDamage=Math.max(1,Math.round((intent.damage+Math.floor(rng()*3))*(state.enemy.weak?.55:1)*(hero.guard?.25:1)));
   hero.hp=Math.max(0,hero.hp-result.enemyDamage);state.enemy.weak=false;
   log(state,`${intent.name}: ${cls.name} takes ${result.enemyDamage} damage.`,'enemy');
@@ -92,8 +108,48 @@ export function act(state,action,rng=Math.random) {
   state.round++;hero.mp=Math.min(cls.mp,hero.mp+3);
   return result;
 }
+
+export function woundedMember(state){return activeParty(state).filter(h=>h.hp<heroStats(h).hp).sort((a,b)=>a.hp/heroStats(a).hp-b.hp/heroStats(b).hp)[0]||null;}
+function partyAction(state,action,rng){
+  const hero=actor(state);if(!hero)return {ok:false,reason:'It is not your turn.'};
+  const cls=heroStats(hero),target=woundedMember(state),intent=enemyIntent(state);
+  if(!['attack','skill','guard','potion'].includes(action))return {ok:false,reason:'Unknown action.'};
+  if(action==='skill'&&hero.mp<cls.cost)return {ok:false,reason:'Not enough focus.'};
+  if(action==='potion'&&(!state.potions||!target))return {ok:false,reason:!state.potions?'No potions left.':'Everyone is at full health.'};
+  const result={ok:true,actorId:hero.id,damage:0,healed:0,burnDamage:0,enemyDamage:0,enemyHits:[],heavy:intent.heavy};
+  const heal=(member,amount)=>{const restored=Math.min(amount,heroStats(member).hp-member.hp);member.hp+=restored;result.healed+=restored;result.healTargetId=member.id;};
+  hero.guard=false;
+  if(action==='attack'){result.damage=Math.round((cls.attack+Math.floor(rng()*5))*(intent.shell?.6:1));}
+  if(action==='guard'){hero.guard=true;hero.mp=Math.min(cls.mp,hero.mp+5);heal(hero,8);}
+  if(action==='potion'){state.potions--;heal(target,50);}
+  if(action==='skill'){
+    hero.mp-=cls.cost;const growth=(hero.level-1)*4;
+    switch(hero.id){
+      case 'knight':result.damage=30+growth;state.enemy.weak=true;break;
+      case 'warrior':result.damage=44+growth;break;
+      case 'paladin':result.damage=24+growth;heal(target||hero,30);break;
+      case 'sorcerer':result.damage=36+growth;state.enemy.burn=2;break;
+      case 'witch':result.damage=30+growth;heal(hero,22);break;
+      case 'gunslinger':result.damage=42+growth;break;
+      case 'monk':result.damage=28+growth;heal(hero,20);activeParty(state).forEach(h=>h.mp=Math.min(heroStats(h).mp,h.mp+3));break;
+    }
+  }
+  log(state,`${memberName(state,hero)}: ${action==='skill'?cls.skill:action}${result.damage?`, ${result.damage} damage`:''}${result.healed?`, +${result.healed} health to ${memberName(state,partyMembers(state).find(h=>h.id===result.healTargetId))}`:''}.`,result.damage?'damage':'heal');
+  state.enemy.hp=Math.max(0,state.enemy.hp-result.damage);state.acted.push(hero.id);
+  if(!state.enemy.hp){win(state);return result;}
+  if(actor(state))return result; // Every living member commands a move before the enemy responds.
+  if(state.enemy.burn>0){result.burnDamage=Math.min(8,state.enemy.hp);state.enemy.hp-=result.burnDamage;state.enemy.burn--;log(state,`Soulfire burns for ${result.burnDamage} damage.`,'damage');}
+  if(!state.enemy.hp){win(state);return result;}
+  const living=activeParty(state).filter(h=>h.hp>0),boss=currentEncounter(state).boss;
+  const targets=boss&&intent.heavy?living:[living[Math.min(living.length-1,Math.floor(rng()*living.length))]];
+  for(const member of targets){const damage=Math.max(1,Math.round((intent.damage+Math.floor(rng()*3))*(state.enemy.weak?.55:1)*(member.guard?.25:1)));member.hp=Math.max(0,member.hp-damage);result.enemyHits.push({id:member.id,damage});result.enemyDamage+=damage;log(state,`${intent.name}: ${memberName(state,member)} takes ${damage} damage.`,'enemy');}
+  state.enemy.weak=false;state.acted=[];
+  if(activeParty(state).every(h=>!h.hp)){state.status='defeat';log(state,'The party’s lights fade. The road will have to wait.','enemy');return result;}
+  state.round++;activeParty(state).forEach(h=>{h.guard=false;if(h.hp)h.mp=Math.min(heroStats(h).mp,h.mp+3);});return result;
+}
+
 export function descend(state) {
-  if(state.status!=='victory') return false;
+  if(state.status!=='victory'||state.campaign==='adventure') return false;
   state.depth++;state.hero.level++;
   const stats=heroStats(state.hero);state.hero.hp=stats.hp;state.hero.mp=stats.mp;state.hero.guard=false;
   state.potions++;state.status='preparing';
@@ -102,14 +158,26 @@ export function descend(state) {
 }
 export function validSave(s) {
   if(!s||s.version!==2||!['intro','preparing','battle','victory','complete','defeat'].includes(s.status)||typeof s.name!=='string'||s.name!==cleanName(s.name)||!Number.isInteger(s.depth)||s.depth<0||s.depth>2||!Number.isInteger(s.round)||s.round<1||!Number.isInteger(s.gold)||s.gold<0||!Number.isInteger(s.potions)||s.potions<0||!Array.isArray(s.log)||s.log.length>80||!s.log.every(l=>typeof l.text==='string'&&typeof l.type==='string')) return false;
+  const adventure=s.campaign==='adventure';
+  if(s.campaign!==undefined&&!adventure)return false;
+  if(s.encounterId!=null&&(!adventure||!Object.hasOwn(REGION_ENCOUNTERS,s.encounterId)))return false;
+  if(adventure&&(!Number.isInteger(s.xp)||s.xp<0||s.depth!==0||s.status==='complete'))return false;
   if(s.status==='intro') return s.hero===null&&s.enemy===null&&s.depth===0&&['story','class'].includes(s.introStep)&&(s.selectedClass===null||CLASSES.some(c=>c.id===s.selectedClass));
   const h=s.hero;
-  if(!h||!CLASSES.some(c=>c.id===h.id)||h.id!==s.selectedClass||h.level!==s.depth+1||typeof h.guard!=='boolean') return false;
+  if(!h||!CLASSES.some(c=>c.id===h.id)||h.id!==s.selectedClass||!Number.isInteger(h.level)||(adventure?(h.level<1||h.level>5):h.level!==s.depth+1)||typeof h.guard!=='boolean') return false;
+  if(adventure){
+    if(!Array.isArray(s.companions)||s.companions.length>6||!Array.isArray(s.activeIds)||s.activeIds.length<1||s.activeIds.length>4||s.activeIds[0]!==h.id||new Set(s.activeIds).size!==s.activeIds.length||!Array.isArray(s.acted)||new Set(s.acted).size!==s.acted.length)return false;
+    const roster=partyMembers(s);if(new Set(roster.map(m=>m?.id)).size!==roster.length||!s.activeIds.every(id=>roster.some(m=>m?.id===id))||!s.acted.every(id=>s.activeIds.includes(id)))return false;
+    if(!s.companions.every(m=>m&&CLASSES.some(c=>c.id===m.id)&&m.level===h.level&&typeof m.guard==='boolean'&&Number.isFinite(m.hp)&&m.hp>=0&&m.hp<=heroStats(m).hp&&Number.isFinite(m.mp)&&m.mp>=0&&m.mp<=heroStats(m).mp))return false;
+    if(s.status==='preparing'&&s.acted.length)return false;
+    if(s.status!=='preparing'&&(!Number.isInteger(s.battleSize)||s.battleSize!==s.activeIds.length))return false;
+  }
   const stats=heroStats(h);
   if(!Number.isFinite(h.hp)||h.hp<0||h.hp>stats.hp||!Number.isFinite(h.mp)||h.mp<0||h.mp>stats.mp) return false;
-  if(s.status==='preparing') return s.enemy===null&&h.hp>0;
-  if(!s.enemy||!Number.isFinite(s.enemy.hp)||s.enemy.hp<0||s.enemy.maxHp!==ENCOUNTERS[s.depth].hp||s.enemy.hp>s.enemy.maxHp||!Number.isInteger(s.enemy.burn)||s.enemy.burn<0||s.enemy.burn>2||typeof s.enemy.weak!=='boolean') return false;
-  if(s.status==='battle') return h.hp>0&&s.enemy.hp>0;
-  if(s.status==='defeat') return h.hp===0&&s.enemy.hp>0;
-  return h.hp>0&&s.enemy.hp===0&&(s.status!=='complete'||s.depth===2);
+  if(s.status==='preparing') return s.enemy===null&&h.hp>0&&(!adventure||s.encounterId==null);
+  if(adventure&&s.encounterId==null)return false;
+  if(!s.enemy||!Number.isFinite(s.enemy.hp)||s.enemy.hp<0||s.enemy.maxHp!==encounterHP(s)||s.enemy.hp>s.enemy.maxHp||!Number.isInteger(s.enemy.burn)||s.enemy.burn<0||s.enemy.burn>2||typeof s.enemy.weak!=='boolean') return false;
+  if(s.status==='battle') return (adventure?Boolean(actor(s)):h.hp>0)&&s.enemy.hp>0;
+  if(s.status==='defeat') return (adventure?activeParty(s).every(m=>m.hp===0):h.hp===0)&&s.enemy.hp>0;
+  return (adventure?activeParty(s).some(m=>m.hp>0):h.hp>0)&&s.enemy.hp===0&&(s.status!=='complete'||s.depth===2);
 }

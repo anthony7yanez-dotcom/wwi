@@ -1,0 +1,6 @@
+// Region encounters are independent of the preserved three-floor prototype.
+export const REGION_ENCOUNTERS = {
+  'ash-wolf': {id:'ash-wolf',name:'The Ashen Wood',enemy:'Ash Wolf',title:'Corrupted woodland hunter',sprite:'wolf',region:'forest',hp:90,attack:10,reward:30,xp:25,intent:'Raking bite',heavyIntent:'Feral pounce',heavyEvery:3,heavyMultiplier:1.5,description:'A wolf steps out of the mist. Red roots move beneath its fur.',flavor:'The forest is listening.'},
+  'cult-sentinel': {id:'cult-sentinel',name:'The Ashen Wood',enemy:'Cult Sentinel',title:'A watcher of the dark road',sprite:'sentinel',region:'forest',hp:135,attack:13,reward:55,xp:40,intent:'Ritual blade',heavyIntent:'Bloodletting rite',heavyEvery:3,heavyMultiplier:1.6,description:'A figure in crimson bars your way. The blade is already drawn.',flavor:'Someone has been keeping this road.'},
+  'root-warden': {id:'root-warden',name:'The Forsaken Shrine',enemy:'Rootbound Warden',title:'Guardian of a forgotten ward',sprite:'warden',region:'shrine',hp:240,attack:15,reward:130,xp:90,intent:'Stone fist',heavyIntent:'Rootquake',heavyEvery:3,heavyMultiplier:1.65,boss:true,description:'Stone grinds against old brass. The shrine guardian wakes.',flavor:'A local ward. An older mystery.'},
+};

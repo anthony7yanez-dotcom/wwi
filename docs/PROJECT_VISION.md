@@ -103,7 +103,7 @@ New moves, abilities, equipment, relics, and upgrades should become available th
 
 A class should feel increasingly powerful as the player develops it, but each class should retain unique strengths and weaknesses.
 
-Do not arbitrarily introduce class switching or additional playable party members without first discussing how they fit the intended design.
+The protagonist retains the class chosen during the introduction. Section 16 below establishes recruitable companions for every unchosen class; class switching remains outside the approved design.
 
 ---
 
@@ -424,3 +424,17 @@ Ancient mysteries, dangerous enemies, powerful relics, meaningful exploration, m
 The freedom and discovery of Golden Sun, set in a far darker world.
 
 That is the vision I want us to build toward.
+
+---
+
+## 16. Companion Recruitment and Party System — Core Gameplay Feature
+
+The player's approved companion system is inspired by Golden Sun's party-based exploration and turn-based combat. Every class not selected by the protagonist is represented by a unique recruitable companion, so the eventual roster supplies the complete class range without changing the protagonist's class or adding a redundant same-class recruit.
+
+Companions have individual names, established class artwork, personalities, histories, motivations, dialogue, and personal connections to the dying world. Recruitment happens through meaningful story events across the adventure, rather than granting the complete party at the start. Starting class influences dialogue and early party composition.
+
+Battles support commands for multiple controllable characters, including attacks, abilities, shared items and defensive actions. Distinct roles encourage coordinated tactics and resource management. Bosses challenge the whole party. Each class also contributes an environmental ability that can investigate puzzles, mechanisms, hidden supplies and routes, making recruitment useful both in and out of battle.
+
+Party management must support future expansion. Personal quests and character development should continue as later chapters are added. Preserve existing class concepts and visual assets. The central goal is a different starting experience for each class while eventually allowing access to every class through recruitment.
+
+See [Companion recruitment and party system](COMPANIONS.md) for this chapter's implementation, named roster, recruitment events, field abilities and remaining content.

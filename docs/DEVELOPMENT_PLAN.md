@@ -2,7 +2,13 @@
 
 The player's [project vision](PROJECT_VISION.md) is the source of creative direction. This document assesses the current prototype and proposes the next stages. Proposed names, lore, mechanics, and scope below are recommendations, not approved canon. The assessment below records the baseline before adventure development; the implementation status below describes the approved update.
 
-## Implemented milestone
+## Current approved expansion
+
+The player approved world expansion, map-triggered battles, directional walking/running animations, and the Section 16 companion system. The adventure now has four connected maps, visible persistent enemies, a shrine boss, six possible unchosen-class recruits, active/reserve party management, controllable party turns, and seven class exploration interactions. Recruitment scenes and personal leads are implemented; extended personal quest arcs remain future content. See [the companion system](COMPANIONS.md) and [README](../README.md) for current behavior.
+
+These approvals supersede the historical solo-only and no-map-combat statements below. The protagonist's class stays fixed, original artwork remains intact, and the combat prototype retains its separate solo journey.
+
+## Earlier implemented milestone
 
 The player approved the first exploration milestone. It is now implemented as the Ember Courtyard and Ruined Approach: seven-class introduction, keyboard/pointer movement, camera, collisions, two NPC conversations, one-time supply chest, a quest journal, a persistent gate mechanism, ward inspection, return/report quest completion, and versioned saves including unfinished dialogue. Original assets remain intact; complementary maps, NPCs, and props were added under `public/assets/world/`.
 
@@ -16,7 +22,7 @@ One protagonist chooses a starting class during the introduction and explores an
 
 Golden Sun informs exploration, puzzle integration, pacing, and readable battles. Characters, lore, locations, and mechanics remain original. Existing dark pixel artwork establishes the visual identity: weathered armor, red corruption, cyan supernatural light, and warm firelight against deep shadows.
 
-Preserve a single playable character and the seven existing class concepts. Do not add party members, class switching, a real-time apocalypse timer, or a replacement art direction without discussion. Major creative changes require the player's approval.
+Preserve the fixed-class protagonist and seven existing class concepts. Section 16 now approves unchosen-class companions. Class switching, a real-time apocalypse timer, and a replacement art direction remain outside the current scope. Major creative changes require the player's approval.
 
 ## Assessment of the current project
 
