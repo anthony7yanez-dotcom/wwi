@@ -1,3 +1,4 @@
+import { SECOND_MAPS, SECOND_FINISHES, secondObjective, secondInteract, secondFinish, secondObjects, secondBlockers, validSecond } from './chapter-two.js';
 import { addItem, initializeInventory } from './inventory.js';
 import { heroStats, log } from './engine.js';
 import { COMPANIONS, partyMembers } from './companions.js';
@@ -30,7 +31,7 @@ export const CHAPTER_MAPS={
 export function createChapter(){return {id:1,phase:'settlement',committed:false,spoken:[],homeNote:false,cloak:false,camp:false,technique:false,puzzleClue:false,puzzle:[],puzzleSolved:false,sealOpened:false,ritualStarted:false,ritualSeen:false,lightRestored:false,completed:false,endingSeen:false,tutorialSeen:false,wayflames:[],lore:['nhalis','fire']};}
 export function startChapter(world,game){world.chapter=createChapter();game.chapterEdition=true;initializeInventory(game);log(game,`${game.name} begins in the Ember Courtyard, among people worth returning to.`,'story');return world;}
 export function remember(world,id){if(PUBLIC_LORE[id]&&!world.chapter.lore.includes(id))world.chapter.lore.push(id);}
-export function chapterObjective(world){const c=world.chapter,f=world.flags;
+export function chapterObjective(world){if(world.chapterTwo)return secondObjective(world);const c=world.chapter,f=world.flags;
  if(!c.committed){
   if(f.ward)return {phase:'settlement',title:'Return with what you know',text:'Tell the caretaker about the cold ward and the fresh marks. Choose why you will act before opening the sanctuary passage.'};
   if(f.gate)return {phase:'settlement',title:'Inspect the silent ward',text:'Examine the unlit ward beyond the raised gate. The courtyard is waiting for word.'};
@@ -38,7 +39,7 @@ export function chapterObjective(world){const c=world.chapter,f=world.flags;
   return {phase:'settlement',title:'A world without hope',text:'This is your home. Speak to the caretaker beside the communal fire. Explore the houses and listen to your neighbors.'};
  }
 
- if(c.completed)return {phase:'complete',title:'Glimmer of Hope',text:'The courtyard has felt the warmth you restored. Chapter I is complete. The First Fire still fades; your larger journey awaits.',complete:true};
+ if(c.completed)return {phase:'complete',title:'Glimmer of Hope',text:'Chapter I is complete. Speak to the caretaker about Lornwatch’s petition to begin Chapter II. The First Fire still fades.',complete:true};
  if(c.lightRestored)return {phase:'return',title:'Bring the light home',text:'Return to the caretaker in the Ember Courtyard. An awakened Wayflame can spare the walk through cleared roads.'};
  if(world.cleared.includes('shrine-warden'))return {phase:'sanctuary',title:'Preserve the local ember',text:'Examine the brazier at the north end of the inner sanctuary. The central First Fire has not been restored.'};
  if(c.ritualSeen)return {phase:'sanctuary',title:'Stand against the ritual',text:'Defeat the Rootbound Warden. Its heavy move is telegraphed; guard to endure it and use abilities against its carapace.'};
@@ -52,8 +53,8 @@ export function chapterObjective(world){const c=world.chapter,f=world.flags;
  if(f.quest)return {phase:'settlement',title:'A road worth opening',text:'Take the eastern road and inspect the gate mechanism. Supplies and equipment are available in the courtyard.'};
  return {phase:'settlement',title:'A world without hope',text:'This is your home. Speak to the caretaker beside the communal fire. Explore the houses and listen to your neighbors.'};
 }
-export function chapterBlockers(world){return world.chapter&&world.map==='shrine'&&!world.chapter.sealOpened?[{x:224,y:112,w:512,h:16}]:[];}
-export function chapterObjects(world,game){if(!world.chapter)return [];const c=world.chapter;
+export function chapterBlockers(world){if(world.chapterTwo&&SECOND_MAPS[world.map])return secondBlockers(world);return world.chapter&&world.map==='shrine'&&!world.chapter.sealOpened?[{x:224,y:112,w:512,h:16}]:[];}
+export function chapterObjects(world,game){if(!world.chapter)return [];if(world.chapterTwo&&SECOND_MAPS[world.map])return secondObjects(world,game);const c=world.chapter;
  const objects=[
  {id:'home-door',map:'courtyard',kind:'door',name:'Your home',x:176,y:224},
  {id:'supply-door',map:'courtyard',kind:'door',name:'Supply house',x:816,y:224},
@@ -77,12 +78,12 @@ export function chapterObjects(world,game){if(!world.chapter)return [];const c=w
  {id:'sanctuary-light',map:'sanctuary',kind:'ward',name:'The local sanctuary brazier',x:480,y:160},
  ...['courtyard','forest','sanctuary'].map((map,i)=>({id:'wayflame-'+map,map,kind:'wayflame',name:'Ancient Wayflame',x:[592,864,640][i],y:[272,256,464][i]})),
  ];
- for(const id of ['knight','warrior','paladin']){const companion=COMPANIONS.find(n=>n.id===id);if(!game?.companions?.some(h=>h.id===id))objects.push({...companion,id:'counterpart-'+id,classId:id,kind:'counterpart'});}
+ for(const id of (world.chapterTwo?['warrior']:['knight','warrior','paladin'])){const companion=COMPANIONS.find(n=>n.id===id);if(!game?.companions?.some(h=>h.id===id))objects.push({...companion,id:'counterpart-'+id,classId:id,kind:'counterpart'});}
  return objects.filter(o=>o.map===world.map&&(o.id!=='cult-voice'||!c.ritualSeen)&&(o.id!=='warden-statue'||!c.ritualSeen));
 }
 const say=(object,speaker,lines,lastLabel='Return',finish=null,choices=undefined)=>({id:object.id,speaker,lines,lastLabel,finish,...(choices?{choices}:{})});
-export function chapterInteract(world,game,object){if(!world.chapter)return null;const c=world.chapter;
- if(object.id==='caretaker'&&c.lightRestored){if(c.completed)return say(object,'The caretaker',['They are coming out of their houses again. Not because the night has ended. Because it need not have the last word.','The First Fire still needs help. Wherever your next road takes you, this courtyard will remember why you went.']);return say(object,'The caretaker',['The ward answered before you reached the gate. Tavi ran here to tell me the stones were warm. I thought they had imagined it.','You did not save the whole world. You saved something we had stopped believing could be saved. There is a difference between waiting for a savior and seeing a neighbor choose to act.','For the first time in a long while, we have a glimmer of hope. Not a promise that all will be well. A reason to try.'],'Finish Chapter I','chapter-complete');}
+export function chapterInteract(world,game,object){if(!world.chapter)return null;if(world.chapterTwo&&SECOND_MAPS[world.map])return secondInteract(world,game,object);const c=world.chapter;
+ if(object.id==='caretaker'&&c.lightRestored){if(c.completed&&world.chapterTwo)return say(object,'The caretaker',[world.chapterTwo.restored?'Word has come from Lornwatch. They speak of the people you helped, and of the work that remains.':'The petition took you farther than our ward road. Keep asking what the people along it need.', 'You still have a place by this fire. Your companions do too. Rest before you set out again.']);if(c.completed)return say(object,'The caretaker',['They are coming out of their houses again. Not because the night has ended. Because it need not have the last word.','A petition has come from Lornwatch. They shelter families from the flooded roads, and their beacon has gone cold. Aldren and Ilyra have gone north to help.'],world.chapterTwo?'Return':'Take the road to Lornwatch',world.chapterTwo?null:'depart-second');return say(object,'The caretaker',['The ward answered before you reached the gate. Tavi ran here to tell me the stones were warm. I thought they had imagined it.','You did not save the whole world. You saved something we had stopped believing could be saved. There is a difference between waiting for a savior and seeing a neighbor choose to act.','For the first time in a long while, we have a glimmer of hope. Not a promise that all will be well. A reason to try.'],'Finish Chapter I','chapter-complete');}
  if(object.id==='caretaker'&&world.flags.ward&&!world.flags.reported)return say(object,'The caretaker',['Cold stone, fresh footprints. Then the ward did not simply go quiet without anyone noticing.','Some say the First Fire will recover if our prayers are faithful enough. Others say we should stop hoping. I can give you neither certainty nor an order.','The older shrine lies north of the Ashen Wood. It may still hold a light—and someone may be trying to prevent it. Why would you go?'],'Choose your resolve','resolve',[
  {label:'For the people who live here.',value:'people'},
  {label:'Because waiting has changed nothing.',value:'act'},
@@ -112,7 +113,7 @@ export function chapterInteract(world,game,object){if(!world.chapter)return null
 }
 export function ritualDialogue(object={id:'cult-voice'}){return say(object,'A Covenant ritualist',['“You carry hope as if it were bread. As if a few more days of warmth could change what is coming.”','“The Ashen Covenant will not kneel before a dying age. We will break its sacred seals. Let what waits beyond answer us.” Red roots tighten around the guardian.','You remember the courtyard. “There are people on that road. Their lives are not an offering.”'],'Stand against the ritual','confront-ritual');}
 export function chapterTrigger(world){const c=world.chapter;if(c&&world.map==='sanctuary'&&!c.ritualStarted&&world.y<=492){c.ritualStarted=true;return {...ritualDialogue(),page:0};}return null;}
-export function chapterFinish(world,game,finish,choice){const c=world.chapter;if(!c)return null;
+export function chapterFinish(world,game,finish,choice){const second=secondFinish(world,game,finish,choice);if(second!==null)return second;const c=world.chapter;if(!c)return null;
  let outcome=null;
  switch(finish){
  case 'enter-home':case 'enter-supply':world.map=finish==='enter-home'?'home':'supply';world.x=480;world.y=544;world.facing='north';if(!world.visited.includes(world.map))world.visited.push(world.map);break;
@@ -129,10 +130,10 @@ export function chapterFinish(world,game,finish,choice){const c=world.chapter;if
  }
  c.phase=chapterObjective(world).phase;return {ok:true,notice:outcome};
 }
-export function travelWayflame(world,game,map){if(!world.chapter||game.status!=='preparing'||world.conversation||!world.chapter.wayflames.includes(map)||map==='sanctuary'&&!world.chapter.lightRestored)return false;const point={courtyard:{x:464,y:368},forest:{x:864,y:304},sanctuary:{x:640,y:496}}[map];if(!point)return false;world.map=map;Object.assign(world,point);world.facing='south';world.grace=64;if(!world.visited.includes(map))world.visited.push(map);return true;}
-export const CHAPTER_FINISHES=['enter-home','enter-supply','take-cloak','take-mirror','resolve','rune-root','rune-ward','rune-ember','open-seal','confront-ritual','restore-light','chapter-complete','shop','waymap','way-courtyard','way-forest','way-sanctuary'];
-export function validChapter(world){const c=world.chapter;if(c===undefined)return true;if(!c||c.id!==1||!['settlement','wilderness','ruins','sanctuary','return','complete'].includes(c.phase)||!['committed','homeNote','cloak','camp','technique','puzzleClue','puzzleSolved','sealOpened','ritualStarted','ritualSeen','lightRestored','completed','endingSeen','tutorialSeen'].every(k=>typeof c[k]==='boolean'))return false;
- if(!Array.isArray(c.spoken)||new Set(c.spoken).size!==c.spoken.length||!c.spoken.every(id=>['baker','tavi','skeptic','oryn'].includes(id))||!Array.isArray(c.lore)||new Set(c.lore).size!==c.lore.length||!c.lore.every(id=>PUBLIC_LORE[id])||!Array.isArray(c.wayflames)||new Set(c.wayflames).size!==c.wayflames.length||!c.wayflames.every(map=>['courtyard','forest','sanctuary'].includes(map)))return false;
+export function travelWayflame(world,game,map){if(!world.chapter||game.status!=='preparing'||world.conversation||!world.chapter.wayflames.includes(map)||map==='sanctuary'&&!world.chapter.lightRestored)return false;const point={courtyard:{x:464,y:368},forest:{x:864,y:304},sanctuary:{x:640,y:496},lornwatch:{x:592,y:320},greyfen:{x:304,y:304},beacon:{x:640,y:512}}[map];if(!point)return false;world.map=map;Object.assign(world,point);world.facing='south';world.grace=64;if(!world.visited.includes(map))world.visited.push(map);return true;}
+export const CHAPTER_FINISHES=[...SECOND_FINISHES,'enter-home','enter-supply','take-cloak','take-mirror','resolve','rune-root','rune-ward','rune-ember','open-seal','confront-ritual','restore-light','chapter-complete','shop','waymap','way-courtyard','way-forest','way-sanctuary'];
+export function validChapter(world){if(!validSecond(world))return false;const c=world.chapter;if(c===undefined)return true;if(!c||c.id!==1||!['settlement','wilderness','ruins','sanctuary','return','complete'].includes(c.phase)||!['committed','homeNote','cloak','camp','technique','puzzleClue','puzzleSolved','sealOpened','ritualStarted','ritualSeen','lightRestored','completed','endingSeen','tutorialSeen'].every(k=>typeof c[k]==='boolean'))return false;
+ if(!Array.isArray(c.spoken)||new Set(c.spoken).size!==c.spoken.length||!c.spoken.every(id=>['baker','tavi','skeptic','oryn'].includes(id))||!Array.isArray(c.lore)||new Set(c.lore).size!==c.lore.length||!c.lore.every(id=>PUBLIC_LORE[id])||!Array.isArray(c.wayflames)||new Set(c.wayflames).size!==c.wayflames.length||!c.wayflames.every(map=>['courtyard','forest','sanctuary',...(world.chapterTwo?['lornwatch','greyfen','beacon']:[])].includes(map)))return false;
  if(!Array.isArray(c.puzzle)||c.puzzle.length>3||!c.puzzle.every((v,i)=>v===['root','ward','ember'][i])||c.puzzleSolved&&c.puzzle.length!==3||c.sealOpened&&(!c.committed||!c.puzzleSolved||!c.technique)||c.ritualStarted&&!c.sealOpened||c.ritualSeen&&!c.ritualStarted||world.cleared.includes('shrine-warden')&&!c.ritualSeen||c.lightRestored&&!world.cleared.includes('shrine-warden')||c.completed&&(!c.committed||!c.lightRestored)||c.endingSeen&&!c.completed||c.wayflames.includes('sanctuary')&&!c.lightRestored)return false;
  return c.committed?world.flags.reported&&['people','act','try'].includes(c.resolve):c.resolve===undefined&&!world.flags.reported;
 }

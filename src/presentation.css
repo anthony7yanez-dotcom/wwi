@@ -64,3 +64,7 @@
 .party-arena .battle-enemy.enemy-hit{animation:enemy-contact .38s ease-out both}
 @keyframes rear-hit{0%,100%{transform:translate(0,0)}25%{transform:translate(12px,4px);filter:brightness(1.6)}55%{transform:translate(-3px,-1px)}75%{transform:translate(2px,1px)}}
 @media(prefers-reduced-motion:reduce){.party-arena .stage-hero.taking-hit,.party-arena .battle-enemy.enemy-hit{animation:none}}
+.world-art-lornwatch,.world-art-greyfen,.world-art-hollows,.world-art-beacon{--world-art:url('/public/assets/world/chapter-two.png')}
+.party-arena:is(.region-greyfen,.region-hollows,.region-beacon){background-image:url('/public/assets/battle/sanctuary.png')}
+
+.intro-resume{max-width:1180px;margin:16px auto 0;padding:0 24px;color:#d7c493;font-size:12px}.intro-resume label{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.intro-resume input{max-width:100%;font-size:12px}.intro-resume p:empty{display:none}.intro-resume p{color:#f0b092;margin:8px 0}

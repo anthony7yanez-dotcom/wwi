@@ -1,5 +1,9 @@
 // Authored loops stay within the open roads; positions are derived from saved distance.
 export const PATROLS = {
+ 'greyfen-wolf':{speed:29,points:[[352,336],[432,336],[432,368],[352,368]]},
+ 'greyfen-fanatic':{speed:22,points:[[672,272],[752,272],[752,304],[672,304]]},
+ 'hollows-fanatic':{speed:23,points:[[480,336],[560,336],[560,400],[480,400]]},
+ 'thorn-sentinel':{speed:14,points:[[480,320],[544,320],[544,368],[480,368]]},
   'wood-wolf':{speed:34,points:[[304,336],[400,336],[400,384],[304,384]]},
   'wood-sentinel':{speed:24,points:[[480,160],[480,240],[432,240],[432,160]]},
   'glade-wolf':{speed:30,points:[[784,352],[848,352],[848,384],[784,384]]},

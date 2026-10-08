@@ -1,6 +1,7 @@
 import { memberName } from './companions.js';
 const weapons={knight:['Weathered longsword','Honed longsword'],warrior:['Woodcutter’s axe','Rehung axe'],paladin:['Sanctuary hammer','Balanced sanctuary hammer'],sorcerer:['Apprentice staff','Inscribed focus staff'],witch:['Old hazel staff','Bound hazel staff'],gunslinger:['Courier’s pistol','Serviced courier’s pistol'],monk:['Worn hand wraps','Reinforced hand wraps']};
 export const ITEMS={
+ 'thorn-signet':{id:'thorn-signet',name:'Thorn King’s Signet',slot:'charm',defense:2,focus:1,description:'A beacon-era signet. Reduces each incoming strike by 2 and restores 1 extra focus after an enemy phase.'},
  ...Object.fromEntries(Object.entries(weapons).flatMap(([id,[basic,better]])=>[[`starter-${id}`,{id:`starter-${id}`,name:basic,slot:'weapon',classId:id,attack:0,description:'The tool you practiced with before this journey began.'}],[`tempered-${id}`,{id:`tempered-${id}`,name:better,slot:'weapon',classId:id,attack:3,description:'Careful repairs add 3 to basic attack damage.'}]])),
  'travel-coat':{id:'travel-coat',name:'Worn travel coat',slot:'armor',defense:0,description:'Patched many times. It still keeps off some of the cold.'},
  'mended-cloak':{id:'mended-cloak',name:'Mended ward-road cloak',slot:'armor',defense:2,description:'Reduces each incoming strike by 2 damage, after guarding.'},

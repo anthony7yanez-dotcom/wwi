@@ -44,7 +44,7 @@ test('fairy tracks discovered quest milestones without revealing the puzzle befo
  w.visited.push('shrine');assert.equal(questTarget(w,g).id,'shrine-stone');w.chapter.puzzleClue=true;
  for(const symbol of ['root','ward','ember']){assert.equal(questTarget(w,g).id,'rune-'+symbol);chapterFinish(w,g,'rune-'+symbol);}
  assert.equal(questTarget(w,g).id,'ruins-cache');chapterFinish(w,g,'take-mirror');assert.equal(questTarget(w,g).id,'ruins-seal');chapterFinish(w,g,'open-seal');assert.equal(questTarget(w,g).id,'cult-voice');
- w.chapter.ritualSeen=true;assert.equal(questTarget(w,g).id,'shrine-warden');w.cleared.push('shrine-warden');assert.equal(questTarget(w,g).id,'sanctuary-light');w.chapter.lightRestored=true;assert.equal(questTarget(w,g).id,'caretaker');w.chapter.completed=true;assert.equal(questTarget(w,g),null);
+ w.chapter.ritualSeen=true;assert.equal(questTarget(w,g).id,'shrine-warden');w.cleared.push('shrine-warden');assert.equal(questTarget(w,g).id,'sanctuary-light');w.chapter.lightRestored=true;assert.equal(questTarget(w,g).id,'caretaker');w.chapter.completed=true;assert.equal(questTarget(w,g).id,'caretaker');
 });
 test('guide paths respect gate, floor and NPC collisions and all chapter interactables remain reachable',()=>{
  const s=fixture(),w=s.world,g=s.game;w.flags.gate=true;w.chapter.sealOpened=true;

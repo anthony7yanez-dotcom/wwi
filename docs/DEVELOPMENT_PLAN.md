@@ -1,5 +1,7 @@
 # The Hollow — project assessment and development plan
 
+> Historical first-slice plan. The current release implements Chapters I and II, as described in README.md and docs/narrative/NARRATIVE_DEPENDENCIES.md. Older estimates and approval boundaries below describe the original prototype, not the current game.
+
 The player's [project vision](PROJECT_VISION.md) is the source of creative direction. This document assesses the current prototype and proposes the next stages. Proposed names, lore, mechanics, and scope below are recommendations, not approved canon. The assessment below records the baseline before adventure development; the implementation status below describes the approved update.
 
 ## Current approved expansion

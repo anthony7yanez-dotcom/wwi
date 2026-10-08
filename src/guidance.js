@@ -1,11 +1,12 @@
+import { secondTarget } from './chapter-two.js';
 import { MAPS, mapExits, worldObjects, activeEnemies, canStand } from './world.js';
 
 // The guide knows the roads and the player's discovered objectives, never
 // undiscovered history. Chapter milestones remain the source of quest truth.
 export function questTarget(world,game){
-  const f=world.flags,c=world.chapter;
+  if(world.chapterTwo)return secondTarget(world,game);const f=world.flags,c=world.chapter;
   let map,id;
-  if(c?.completed||!c&&f.shrine)return null;
+  if(c?.completed){const o=worldObjects({...world,map:'courtyard'},game).find(o=>o.id==='caretaker');return {...o,map:'courtyard',name:'The caretaker’s Lornwatch petition'};}if(!c&&f.shrine)return null;
   if(!f.quest||f.ward&&(!f.reported||c&&!c.committed)){map='courtyard';id='caretaker';}
   else if(!f.gate){map='approach';id='lever';}
   else if(!f.ward){map='approach';id='ward';}
@@ -51,7 +52,7 @@ export function guidePath(world,game,destination=guideDestination(world,game)){
   const safe=(x,y)=>{const k=x+','+y;if(!safeCells.has(k))safeCells.set(k,canStand(world,x,y,game)&&!enemies.some(e=>Math.hypot(e.x-x,e.y-y)<40));return safeCells.get(k);};
   const sx=Math.round(world.x/step),sy=Math.round(world.y/step);
   let start=null;
-  for(let r=0;r<=2&&!start;r++)for(let y=sy-r;y<=sy+r&&!start;y++)for(let x=sx-r;x<=sx+r;x++)if(safe(x*step,y*step)){start={x,y};break;}
+  for(let r=0;r<=2&&!start;r++)for(let y=sy-r;y<=sy+r&&!start;y++)for(let x=sx-r;x<=sx+r;x++)if(safe(x*step,y*step)&&Array.from({length:9},(_,i)=>i/8).every(t=>safe(world.x+(x*step-world.x)*t,world.y+(y*step-world.y)*t))){start={x,y};break;}
   if(!start)return [];
   const queue=[start],parents=new Map([[key(start.x,start.y),null]]);let end=null;
   const tolerance=destination.kind==='exit'?12:40;

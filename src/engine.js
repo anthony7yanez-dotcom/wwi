@@ -50,15 +50,15 @@ export function encounterHP(state){return Math.round(currentEncounter(state).hp*
 export function currentEncounter(state) { return state.encounterId ? REGION_ENCOUNTERS[state.encounterId] : ENCOUNTERS[state.depth]; }
 export function log(state,text,type='normal') { state.log.push({text,type});if(state.log.length>80) state.log.shift(); }
 export function enemyIntent(state) {
-  const e=currentEncounter(state),enraged=Boolean(e.boss&&state.enemy&&state.enemy.hp<=state.enemy.maxHp/2),heavy=state.round%(enraged?2:e.heavyEvery||3)===0,shell=Boolean(e.boss&&state.round%4===0);
-  return {heavy,shell,enraged,name:heavy?(e.heavyIntent||'Devastating pulse'):e.intent,damage:Math.round(e.attack*(heavy?(e.heavyMultiplier||1.6):1)*(state.campaign==='adventure'?1+.35*((state.battleSize||1)-1):1)),description:shell?'Stone carapace: basic attacks deal 40% less damage this turn. Use an ability.':heavy?'A heavy strike is coming. Guard to absorb it.':enraged?'The warden is enraged. Heavy attacks come every second round.':'The enemy prepares a direct strike.'};
+  const e=currentEncounter(state),enraged=Boolean(e.boss&&state.enemy&&state.enemy.hp<=state.enemy.maxHp/2),heavy=state.round%(enraged?2:e.heavyEvery||3)===0,shell=Boolean(e.thornShell?!state.enemy?.thornBroken:e.boss&&state.round%4===0);
+  return {heavy,shell,enraged,name:heavy?(e.heavyIntent||'Devastating pulse'):e.intent,damage:Math.round(e.attack*(heavy?(e.heavyMultiplier||1.6):1)*(state.campaign==='adventure'?1+.35*((state.battleSize||1)-1):1)),description:e.thornShell&&shell?'Thorn shell: chain two different class abilities in one round to break it. Guard before Thornstorm.':shell?'Stone carapace: basic attacks deal 40% less damage this turn. Use an ability.':heavy?'A heavy strike is coming. Guard to absorb it.':enraged?'The warden is enraged. Heavy attacks come every second round.':'The enemy prepares a direct strike.'};
 }
 export function startEncounter(state,encounterId=null) {
   if(state.status!=='preparing'||!state.hero) return false;
   if(encounterId!==null&&(!REGION_ENCOUNTERS[encounterId]||state.campaign!=='adventure'))return false;
   if(encounterId!==null)state.encounterId=encounterId;
   if(state.campaign==='adventure'){state.battleSize=activeParty(state).length;state.acted=[];activeParty(state).forEach(h=>h.guard=false);}
-  const e=currentEncounter(state),hp=encounterHP(state); state.enemy={hp,maxHp:hp,burn:0,weak:false};
+  const e=currentEncounter(state),hp=encounterHP(state); state.enemy={hp,maxHp:hp,burn:0,weak:false,...(e.thornShell?{combo:[],thornBroken:false}:{})};
   state.status='battle';state.round=1;state.hero.guard=false;
   log(state,`${e.enemy} awakens. You act first.`,'story');return true;
 }
@@ -136,6 +136,7 @@ function partyAction(state,action,rng){
       case 'monk':result.damage=28+growth;heal(hero,20);activeParty(state).forEach(h=>h.mp=Math.min(heroStats(h).mp,h.mp+3));break;
     }
   }
+  if(currentEncounter(state).thornShell&&action==='skill'){state.enemy.combo.push(hero.id);if(new Set(state.enemy.combo).size>=2){state.enemy.thornBroken=true;result.shellBroken=true;log(state,'Two callings answer together. The thorn shell breaks for this round.','story');}else result.damage=Math.round(result.damage*.6);}
   log(state,`${memberName(state,hero)}: ${action==='skill'?cls.skill:action}${result.damage?`, ${result.damage} damage`:''}${result.healed?`, +${result.healed} health to ${memberName(state,partyMembers(state).find(h=>h.id===result.healTargetId))}`:''}.`,result.damage?'damage':'heal');
   state.enemy.hp=Math.max(0,state.enemy.hp-result.damage);state.acted.push(hero.id);
   if(!state.enemy.hp){win(state);return result;}
@@ -145,7 +146,7 @@ function partyAction(state,action,rng){
   const living=activeParty(state).filter(h=>h.hp>0),boss=currentEncounter(state).boss;
   const targets=boss&&intent.heavy?living:[living[Math.min(living.length-1,Math.floor(rng()*living.length))]];
   for(const member of targets){const damage=Math.max(1,Math.round((intent.damage+Math.floor(rng()*3))*(state.enemy.weak?.55:1)*(member.guard?.25:1))-heroStats(member).defense);member.hp=Math.max(0,member.hp-damage);result.enemyHits.push({id:member.id,damage});result.enemyDamage+=damage;log(state,`${intent.name}: ${memberName(state,member)} takes ${damage} damage.`,'enemy');}
-  state.enemy.weak=false;state.acted=[];
+  state.enemy.weak=false;state.acted=[];if(currentEncounter(state).thornShell){state.enemy.combo=[];state.enemy.thornBroken=false;}
   if(activeParty(state).every(h=>!h.hp)){state.status='defeat';log(state,'The party’s lights fade. The road will have to wait.','enemy');return result;}
   state.round++;activeParty(state).forEach(h=>{h.guard=false;if(h.hp)h.mp=Math.min(heroStats(h).mp,h.mp+heroStats(h).focusRecovery);});return result;
 }
@@ -176,6 +177,7 @@ export function validSave(s) {
     if(s.status==='preparing'&&s.acted.length)return false;
     if(s.status!=='preparing'&&(!Number.isInteger(s.battleSize)||s.battleSize!==s.activeIds.length))return false;
   }
+  if(s.enemy&&REGION_ENCOUNTERS[s.encounterId]?.thornShell&&(!Array.isArray(s.enemy.combo)||s.enemy.combo.length>4||new Set(s.enemy.combo).size!==s.enemy.combo.length||!s.enemy.combo.every(id=>s.acted.includes(id))||typeof s.enemy.thornBroken!=='boolean'||s.enemy.thornBroken!==(s.enemy.combo.length>=2)))return false;
   const stats=heroStats(h);
   if(!Number.isFinite(h.hp)||h.hp<0||h.hp>stats.hp||!Number.isFinite(h.mp)||h.mp<0||h.mp>stats.mp) return false;
   if(s.status==='preparing') return s.enemy===null&&h.hp>0&&(!adventure||s.encounterId==null);

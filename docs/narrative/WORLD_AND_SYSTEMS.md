@@ -28,14 +28,14 @@ flowchart LR
  D <--> T[Throne Beneath the Fire]
 ```
 
-This graph specifies planned connections, not playable maps. Later routes may add physical passages and relic/companion gates within earlier maps. Each settlement needs culture, architecture, recurring NPCs, equipment, rest, optional quests, history, secrets, regional relationships, and event reactions. Wayflames supplement roads and caves. Availability is an explicit condition, distinct from discovery. Their public sacred interpretation changes only with Chapter VI discoveries.
+Chapter II now connects Ashen Wood east to Lornwatch, then Greyfen March. Greyfen north reaches the Beacon of Thorns; south reaches the Mourning Hollows. Lornwatch, Greyfen and the restored beacon have Wayflames. These connections are playable; the remaining graph is planned. Later routes may add physical passages and relic/companion gates within earlier maps. Each settlement needs culture, architecture, recurring NPCs, equipment, rest, optional quests, history, secrets, regional relationships, and event reactions. Wayflames supplement roads and caves. Availability is an explicit condition, distinct from discovery. Their public sacred interpretation changes only with Chapter VI discoveries.
 
 ## Combat ecology and progression
 
 | Stage | Enemy ecology / distinct mechanic | Boss mechanics to design | Progression and lore rewards |
 | --- | --- | --- | --- |
 | I (implemented) | Ashen beasts; Covenant sentinel; telegraphed heavy strikes | Rootbound Warden: stone carapace reduces basic blows, faster heavy rhythm below half health, Rootquake reaches all active allies | Shared XP, repaired starter weapon, mended cloak, Veilglass Mirror, Emberglass pendant; local source-attributed observations |
-| II (planned) | Marsh withered beasts, poison, defensive formations | Thornbound Sentinel: beacon-bound armor and party coordination | Defensive/counter relic such as Thorn King's Signet; difficult rescue outcome and dated records |
+| II (implemented) | Fen Stalker and Covenant Mirekeeper, authored patrols and telegraphed attacks; existing enemy silhouettes retained | Thornbound Sentinel: renewing thorn shell, two different abilities in a party round break it, enraged multi-target Thornstorm | Thorn King’s Signet: +2 defense and +1 focus recovery; three rescue outcomes, dated records, optional delivery and camp trust |
 | III (planned) | Crystal guardians, elemental resistance, magical disruption | Votive Colossus: protected archives and shifting defenses | Runic/exploration upgrades and sourced contradictions; puzzle tools always have class-route fallback |
 | IV (planned) | Fanatics, curses, reinforcements, dangerous Veilspawn | Weeping Host: uncontrolled summons, multi-target pressure | Covenant seal with explicit curse tradeoff; faction-source lore, not objective revelation |
 | V (planned) | Ashborn, sacred seals, mixed party challenges | Hollow Sovereign: multiple phases requiring accumulated roles | Milestone abilities and pilgrimage relics; Keeper's Fragment meaning withheld |
@@ -81,4 +81,10 @@ Future schema versions should add structured `quests`, `decisions`, `relationshi
 
 ## Release and spoiler boundary
 
-`npm run build` copies only index, source, and public assets into dist and embeds player assets into standalone `play.html`. Narrative documents are developer references, excluded from the player bundle. Tests reject hidden Engine/keeper truth in the early runtime and bundle. Chapters II–VI remain documentation; menus do not advertise access to unfinished chapters.
+`npm run build` copies only index, source, and public assets into dist and embeds player assets into standalone `play.html`. Narrative documents are developer references, excluded from the player bundle. Tests reject hidden Engine/keeper truth in the early runtime and bundle. Chapter II is playable. Chapters III–VI remain documentation; the eastern Sablewood sign explains its closed route. No menu offers travel into unfinished content. The Chapter II environment atlas uses four quadrants of one image to keep the standalone download under the 100 MiB limit.
+
+### Chapter II persistence additions
+
+`world.chapterTwo` is optional, requiring completed Chapter I. It records request, crossing, ledger, cup, selected rite, sluice, beacon, completion, blanket pickup/delivery, camp, recruited companion trust and discovered lore. Save validation rejects impossible dependencies and unknown choices. Chapter I fields and recruited parties remain intact. Thornbound battle state records class IDs that used abilities this round and whether the shell is broken; partial-round saves retain those commands. New enemy patrol distances use the existing validator. No schema/version reset is needed.
+
+Sprite rendering measures alpha gutters and main silhouettes without changing source art. DOM battle sheets are registered once into cached canvas atlases; overworld frames share row measurements and feet registration. Atlas work yields between rows so it cannot monopolize animation/input. Audio uses one gesture-unlocked Web Audio context for the original score and distinct effects; mute stops all voices and suspends the context.

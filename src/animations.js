@@ -20,4 +20,4 @@ export const ENEMY_MOVES = {
   sentinel:{base:4,columns:6,attack:['Crescent slash',780],heavy:['Crimson sweep',1080],death:['Ashen fall',820]},
   warden:{base:8,columns:6,attack:['Stone cleave',1000],heavy:['Rootquake',1320],death:['Broken roots',1100]},
 };
-export function enemyMove(id,action){const move=ENEMY_MOVES[id];return {row:move.base+{attack:1,heavy:2,death:3}[action],columns:move.columns,label:move[action][0],duration:move[action][1]};}
+export function enemyMove(id,action){const move=ENEMY_MOVES[id];return {row:move.base+{attack:1,heavy:2,death:3}[action],columns:id==='wolf'&&action==='death'?6:move.columns,label:move[action][0],duration:move[action][1]};}

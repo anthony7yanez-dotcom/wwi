@@ -1,6 +1,6 @@
 # Six-chapter dependency and reveal map
 
-Future chapters are architecture only. Chapter I is the implementation boundary. All chapter transitions require explicit development authorization.
+Chapters I and II are implemented. The October 8 continuation request authorizes the next playable chapter. Chapters III–VI remain architecture only; their implementation awaits further development authorization.
 
 | Chapter / theme | Entry prerequisites | Essential milestones and convergence | Locations / major boss | Clue and knowledge ceiling |
 | --- | --- | --- | --- | --- |
@@ -44,3 +44,9 @@ Optional rewards need fallbacks for mandatory exploration checks. The protagonis
 ## Authoring verification before future content
 
 For each chapter, exercise seven starting-class routes, recruited versus counterpart scenes, side-quest omissions, each major decision outcome, and save/reload at important dialogue and battle states. Assert essential milestones remain reachable, unique rewards cannot repeat, NPC responses use explicit facts, and discovered lore never exceeds its reveal chapter. Chapter V rekindling remains possible across all coherent branches. Chapter VI revelation must explain earlier evidence without contradicting it.
+
+## Chapter II event dependencies (implemented)
+
+`src/chapter-two.js` owns a separate `world.chapterTwo` record, preserving the completed Chapter I record and all legacy roster data. The courtyard petition begins the chapter explicitly. Lornwatch → request → Aldren or protagonist Knight → Oathbrace crossing → Mourning Hollows ledger → Ilyra or protagonist Paladin → Kindle cup → Elna’s three-way decision → optional rain sluice → Thornbound Sentinel → chosen beacon rite → Lornwatch consequences → completion. All choices converge on regional aid; the Sablewood route stays closed for now.
+
+`shelter` warms shelters while the peat gardens deteriorate; `channels` retains rainwater but limits shelter warmth; `ration` protects the marsh while families must share rooms or leave homes. The named decision remains in the save and journal. Optional blanket delivery rewards once. Camp trust records only companions actually recruited. Counterparts provide essential ability advice without duplicate recruitment. Reserves contribute both required abilities. Twenty-one starting-class/decision combinations are exercised in logic tests, alongside browser dialogue, partial-round persistence, physical roads and return travel. Early records retain an uncertain, source-attributed interpretation.
