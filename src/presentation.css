@@ -95,3 +95,32 @@
 @keyframes creature-collapse{0%,65%{opacity:1}100%{opacity:.45}}
 @media(max-width:650px){.party-arena{height:440px}.party-arena .battle-enemy,.party-arena .battle-enemy.enemy-warden{--enemy-display-size:calc(var(--enemy-size,240px)*.74);left:21%;bottom:calc(165px - var(--enemy-display-size)*.06)}.learned-commands>div:last-child{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){.party-arena .battle-enemy.playing-enemy{animation:none;transform:none;filter:none}}
+
+/* Lesson effects use registered full-body poses; support effects reach allies. */
+.arena[data-animation-ready=false] .performing,.arena[data-animation-ready=false] .performing *{animation-play-state:paused!important}
+.stage-hero.performing[data-technique]>.frame-sprite{animation:none!important}
+.technique-aura,.technique-impact{color:var(--fx-color);pointer-events:none;position:absolute;z-index:7;filter:drop-shadow(0 0 5px currentColor)}
+.technique-aura{inset:5% 0 10%;animation:lesson-channel var(--move-duration) ease-in-out both}
+.technique-aura svg{position:absolute;width:80%;height:80%;left:10%;top:10%;opacity:.75}
+.technique-aura i,.technique-impact i{position:absolute;left:50%;top:50%;height:3px;width:10px;background:currentColor;transform:rotate(calc(var(--ray)*360deg/var(--rays))) translateX(40px)}
+.technique-impact{width:90px;height:90px;margin:-45px;opacity:0;animation:lesson-impact calc(var(--move-duration)*.42) ease-out calc(var(--move-duration)*.48) both}
+.technique-impact svg{width:100%;height:100%}
+.technique-impact.support{width:66px;height:66px;margin:-33px;animation-name:lesson-support}
+.motif-rime,.motif-prism{clip-path:polygon(50% 0,85% 15%,100% 50%,85% 85%,50% 100%,15% 85%,0 50%,15% 15%)}
+.motif-cleave,.motif-edge,.motif-ripper{animation-name:lesson-cut}
+.motif-harvest,.motif-confluence,.motif-hex{animation-name:lesson-spiral}
+.motif-incendiary,.motif-palm,.motif-execution{animation-name:lesson-burst}
+.motif-torrent,.motif-wither,.motif-barrage,.motif-volley{animation-name:lesson-rain}
+.motif-breaker,.motif-judgment,.motif-mercury{animation-name:lesson-shatter}
+@keyframes lesson-channel{0%,100%{opacity:0;transform:scale(.75)}25%{opacity:.7;transform:scale(.85)}55%{opacity:1;transform:scale(1.05)}80%{opacity:.3;transform:scale(1.15)}}
+@keyframes lesson-impact{0%{opacity:0;transform:scale(.3)}25%{opacity:1;transform:scale(.95)}100%{opacity:0;transform:scale(1.2)}}
+@keyframes lesson-support{0%{opacity:0;transform:translateY(10px) scale(.8)}30%{opacity:.85}100%{opacity:0;transform:translateY(-18px) scale(1.15)}}
+@keyframes lesson-cut{0%{opacity:0;transform:translate(20px,20px) rotate(-30deg) scale(.5)}25%{opacity:1}100%{opacity:0;transform:translate(-20px,-20px) rotate(20deg) scale(1.15)}}
+@keyframes lesson-spiral{0%{opacity:0;transform:rotate(-90deg) scale(.4)}30%{opacity:1}100%{opacity:0;transform:rotate(80deg) scale(1.2)}}
+@keyframes lesson-burst{0%{opacity:0;transform:scale(.2)}20%{opacity:1;transform:scale(1.1)}60%{opacity:.8;transform:scale(.9)}100%{opacity:0;transform:scale(1.3)}}
+@keyframes lesson-rain{0%{opacity:0;transform:translateY(-35px) scale(.8)}30%{opacity:1}100%{opacity:0;transform:translateY(10px) scale(1.1)}}
+@keyframes lesson-shatter{0%{opacity:0;transform:scale(.4) rotate(-12deg)}30%{opacity:1;transform:scale(1.1)}70%{opacity:.8;transform:rotate(8deg)}100%{opacity:0;transform:scale(1.4)}}
+@media(max-width:600px){.technique-impact{width:66px;height:66px;margin:-33px}.technique-impact.support{width:50px;height:50px;margin:-25px}.technique-impact i{transform:rotate(calc(var(--ray)*360deg/var(--rays))) translateX(26px)}}
+@media(prefers-reduced-motion:reduce){.technique-aura,.technique-impact{animation:none;opacity:.55;filter:none}.technique-aura i,.technique-impact i{display:none}}
+/* Keep the gesture-based sound control reachable on the smallest phones. */
+@media(max-width:380px){.topbar{gap:7px}.topbar .brand{font-size:15px;gap:7px}.topbar .brand-sigil{width:26px;height:26px}.topbar .header-actions{display:flex;flex-shrink:0}.topbar .header-actions .autosave{display:none}.topbar .header-actions [data-action=sound]{width:36px;height:36px}}

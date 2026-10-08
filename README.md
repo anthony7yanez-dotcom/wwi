@@ -82,3 +82,13 @@ These documents contain future story planning and spoilers; they are separate fr
 - [World and systems architecture](docs/narrative/WORLD_AND_SYSTEMS.md): regional connections, progression, management interface, persistence, and release boundaries.
 - [Chapter I outline](docs/CHAPTER_I.md) and [original brief](docs/narrative/CHAPTER_I_BRIEF.md).
 - [Party foundation](docs/COMPANIONS.md) and [original project vision](docs/PROJECT_VISION.md).
+
+## Music, inns, shops and blacksmiths
+
+Enable the sound button in the upper-right corner to hear the original dark fantasy score. Settlement, forest, ruin, marsh, ordinary battle, and boss battle themes change with your surroundings. Swords, axes, hammers, fists, shots, shields, spells, and all 28 alchemist techniques have distinct cues. Mute stops music and effects together; audio starts only after you enable it.
+
+Look for the **INN · SHOP · FORGE** signs: The Last Coal Inn in the courtyard, The Lantern Bough in the Ashen Wood, Pilgrim’s Rest in the Forsaken Shrine, The Timber Hearth in Lornwatch, The Reed Lantern in Greyfen March, and shelters in the Mourning Hollows and Beacon of Thorns. Approach and press **E**. Harker also provides all three services in the supply house and Lornwatch. The Map menu lists the regional stops.
+
+Inns cost **5 gold** and restore health and focus to the whole recruited roster, including reserves. Public hearths remain free. Shops sell potions, repaired class weapons, and class-fitted armor for your recruited characters. Equip purchases in **Menu → Equipment**. Blacksmiths can reforge repaired weapons and mended cloaks twice: **level 2 / 30 gold**, then **level 3 / 50 gold**. Each weapon temper adds 3 attack; each cloak temper adds 1 armor. Upgrades follow the equipment into saves and remain equipped.
+
+Every alchemist technique has a dedicated full-body pose sequence, casting motif, sound, and targeted effect. Support techniques visibly reach the party. Reduced motion shortens sequences and keeps effects still.

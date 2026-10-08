@@ -31,7 +31,7 @@ for (const match of [...standalone.matchAll(/<link rel="stylesheet" href="([^\"]
 }
 const assetScript = `<script>{const decode=${decode85.toString()},alphabet=${inlineJSON(BASE85_ALPHABET)};window.HOLLOW_ASSETS={};for(const [path,asset] of Object.entries(${inlineJSON(assets)})){const bytes=decode(asset.data,asset.size,alphabet);window.HOLLOW_ASSETS[path]=URL.createObjectURL(new Blob([bytes],{type:asset.type}));}}</script>`;
 standalone = standalone.replace('</title>',()=>`</title>${assetScript}`);
-const bundle = await build({ entryPoints:[fileURLToPath(new URL('src/app.js',root))], bundle:true, write:false, format:'iife', target:'es2022' });
+const bundle = await build({ entryPoints:[fileURLToPath(new URL('src/app.js',root))], bundle:true, write:false, format:'iife', target:'es2022', minify:true });
 const code = bundle.outputFiles[0].text.replace(/<\/script/gi,'<\\/script');
 standalone = standalone.replace('<script type="module" src="/src/app.js"></script>', ()=>`<script>${code}</script>`);
 standalone = standalone.replace('href="/" aria-label="The Hollow home"', 'href="#" aria-label="The Hollow home"');

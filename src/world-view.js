@@ -89,7 +89,7 @@ export function mountWorld({root,world,game,onSave,isBlocked,onEncounter,onMenu=
     if(finished&&c.finish?.startsWith('field:')){const node=FIELD_NODES.find(n=>n.id===c.id);world.conversation={id:c.id,speaker:c.speaker,lines:[node.reward,`${node.gold?'+'+node.gold+' gold. ':''}${node.potions?'+'+node.potions+' potions. ':''}${node.rest?'Party health and focus restored.':node.focus?'Party focus restored.':''} Discovery recorded in your journal.`],page:0,lastLabel:'Return',finish:null};}
     save();resetInput();updateHUD();renderDialogue(Boolean(world.conversation));if(!world.conversation)canvas.focus({preventScroll:true});
     if(finished?.notice)toast(finished.notice);
-    if(c.finish==='shop')onMenu('shop');if(c.finish==='training'&&finished)onMenu('training');if(c.finish==='waymap')onMenu('map');if(['chapter-complete','depart-second','second-complete'].includes(c.finish))onChapterComplete();
+    if(c.finish==='services'&&finished)onMenu('inn');if(c.finish==='shop')onMenu('shop');if(c.finish==='training'&&finished)onMenu('training');if(c.finish==='waymap')onMenu('map');if(['chapter-complete','depart-second','second-complete'].includes(c.finish))onChapterComplete();
     if(c.finish==='gate')toast('The chain catches. The gate is open.');
     if(c.finish==='accept')toast('Quest added · Inspect the silent ward');
     if(c.finish==='report')toast('Quest complete · A fire worth keeping');
@@ -183,6 +183,7 @@ export function mountWorld({root,world,game,onSave,isBlocked,onEncounter,onMenu=
     const {x,y}=object,kind=object.id==='field-paladin'&&!world.flags[object.id]?'ward':object.kind;
     if(kind==='companion'||kind==='counterpart'){drawCharacter(object.classId,x,y,'south',false,false,0);ctx.fillStyle='#d4be77';ctx.fillRect(x-2,y-66,4,4);return;}
     shadow(x,y,['npc','resident'].includes(kind)?26:34);
+    if(kind==='service'){fill(x-2,y-18,4,18,'#6e5637');fill(x-24,y-35,48,30,'#222d2d');fill(x-22,y-33,44,2,'#bd9860');ctx.font='11px Georgia';ctx.textAlign='center';ctx.fillStyle='#f0d6a0';ctx.fillText('INN',x,y-21);ctx.font='8px Georgia';ctx.fillText('SHOP · FORGE',x,y-10);glow(x,y-25,35,'#dfae4e33');return;}
     if(kind==='resident'){const size=images.npc.naturalWidth/2;if(size)drawGrounded(images.npc,(object.sprite%2)*size,0,size,images.npc.naturalHeight,x-30,y,60,64);if(object.id==='alchemist'){ctx.fillStyle='#a6e6cf';ctx.font='14px Georgia';ctx.textAlign='center';ctx.fillText('⚗',x,y-67);}return;}
     if(kind==='cult'||kind==='guardian'){drawEnemy({x,y,encounter:kind==='cult'?'cult-sentinel':'root-warden'},time);return;}
     if(kind==='door'){fill(x-13,y-34,26,35,'#3f3025');fill(x-10,y-30,20,30,'#201c17');fill(x+6,y-15,3,3,'#c9ac6c');return;}
