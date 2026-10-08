@@ -14,3 +14,10 @@ export function characterMove(heroId, action) {
   const [label, effect, duration] = action === 'potion' ? ['Drink potion', 'potion-heal', 600] : hero[action];
   return { name: action === 'potion' ? 'potion-drink' : `${heroId}-${action}`, label, effect, duration, color: action === 'potion' ? '#a8dd93' : hero.color };
 }
+
+export const ENEMY_MOVES = {
+  wolf:{base:0,columns:5,attack:['Raking bite',650],heavy:['Crimson maul',900],death:['Withered collapse',700]},
+  sentinel:{base:4,columns:6,attack:['Crescent slash',780],heavy:['Crimson sweep',1080],death:['Ashen fall',820]},
+  warden:{base:8,columns:6,attack:['Stone cleave',1000],heavy:['Rootquake',1320],death:['Broken roots',1100]},
+};
+export function enemyMove(id,action){const move=ENEMY_MOVES[id];return {row:move.base+{attack:1,heavy:2,death:3}[action],columns:move.columns,label:move[action][0],duration:move[action][1]};}

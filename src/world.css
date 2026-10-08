@@ -29,3 +29,20 @@
 .party-arena .enemy-hud{z-index:2}
 @media(max-width:650px){.party-battle-main{display:flex;flex-direction:column}.party-battle-main>.game-layout{display:contents}.party-battle-main .battle-column{order:1}.party-battle-main .command-bar{position:static;order:2;margin-bottom:20px}.party-battle-main .side-column{order:3}.party-battle-main .page-footer{order:4}}
 @media(max-width:650px){.party-arena .enemy-hud{right:auto;left:14px;width:175px}}
+
+.world-enemy-motions{--world-art:url('/public/assets/world/enemy-motions.png')}
+.locomotion-knight.locomotion-alt{--locomotion:url('/public/assets/alternates/knight.png')}
+.locomotion-warrior.locomotion-alt{--locomotion:url('/public/assets/alternates/warrior.png')}
+.locomotion-paladin.locomotion-alt{--locomotion:url('/public/assets/alternates/paladin.png')}
+.locomotion-sorcerer.locomotion-alt{--locomotion:url('/public/assets/alternates/sorcerer.png')}
+.locomotion-witch.locomotion-alt{--locomotion:url('/public/assets/alternates/witch.png')}
+.locomotion-gunslinger.locomotion-alt{--locomotion:url('/public/assets/alternates/gunslinger.png')}
+.locomotion-monk.locomotion-alt{--locomotion:url('/public/assets/alternates/monk.png')}
+
+.battle-enemy.playing-enemy{background-image:url('/public/assets/world/enemy-motions.png');animation:none;transform:none}
+.battle-enemy.enemy-hit{animation:enemy-contact .38s steps(5) both}
+.battle-enemy.enemy-wolf[data-move=heavy]{filter:drop-shadow(-8px 3px 10px #b3262670)}
+.battle-enemy.enemy-sentinel[data-move=heavy]{filter:drop-shadow(-8px 3px 10px #d5594570)}
+.battle-enemy.enemy-warden[data-move=heavy]{filter:drop-shadow(-8px 3px 15px #58c4d290)}
+.battle-enemy[data-move=death]{filter:drop-shadow(0 0 10px #b9474960)}
+@media(prefers-reduced-motion:reduce){.battle-enemy.enemy-hit{animation:none}}

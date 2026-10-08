@@ -1,3 +1,4 @@
+import { GENDERS, ORIGINAL_GENDER } from './sprites.js';
 import { REGION_ENCOUNTERS } from './encounters.js';
 import { activeParty, partyMembers, memberName } from './companions.js';
 import { equipmentBonuses, validInventory } from './inventory.js';
@@ -21,18 +22,18 @@ export function heroStats(hero) {
   return {...cls,hp:cls.hp+(hero.level-1)*15,mp:cls.mp+(hero.level-1)*4,attack:cls.attack+(hero.level-1)*3+gear.attack,defense:gear.defense,focusRecovery:3+gear.focus,description:cls.description.replace(/\d+/,value=>String(Number(value)+(hero.level-1)*4))};
 }
 export function cleanName(value) { return String(value || 'Wanderer').replace(/[\x00-\x1f\x7f]/g,'').trim().slice(0,24) || 'Wanderer'; }
-export function createGame(classId=null,name='Wanderer') {
+export function createGame(classId=null,name='Wanderer',gender=null) {
   const state={version:2,status:'intro',introStep:'story',selectedClass:null,name:cleanName(name),depth:0,round:1,gold:0,potions:3,hero:null,enemy:null,log:[]};
   if(classId!==null) {
     if(!CLASSES.some(c=>c.id===classId)) throw new Error('Choose one of the seven classes.');
-    chooseClass(state,classId);
+    chooseClass(state,classId,gender);
   }
   return state;
 }
-export function chooseClass(state,classId) {
+export function chooseClass(state,classId,gender=state.selectedGender) {
   const cls=CLASSES.find(c=>c.id===classId);
-  if(state.status!=='intro'||!cls) return false;
-  state.hero={id:classId,level:1,hp:cls.hp,mp:cls.mp,guard:false};
+  if(state.status!=='intro'||!cls||(gender!=null&&!GENDERS.includes(gender))) return false;
+  state.hero={id:classId,gender:gender||ORIGINAL_GENDER[classId],level:1,hp:cls.hp,mp:cls.mp,guard:false};
   state.selectedClass=classId; state.status='preparing';state.introStep='done';
   log(state,`${state.name}, the ${cls.name.toLowerCase()}, stands alone at the mouth of the Hollow.`,'story');
   return true;
@@ -159,6 +160,7 @@ export function descend(state) {
 }
 export function validSave(s) {
   if(!s||s.version!==2||!['intro','preparing','battle','victory','complete','defeat'].includes(s.status)||typeof s.name!=='string'||s.name!==cleanName(s.name)||!Number.isInteger(s.depth)||s.depth<0||s.depth>2||!Number.isInteger(s.round)||s.round<1||!Number.isInteger(s.gold)||s.gold<0||!Number.isInteger(s.potions)||s.potions<0||!Array.isArray(s.log)||s.log.length>80||!s.log.every(l=>typeof l.text==='string'&&typeof l.type==='string')) return false;
+  if(s.selectedGender!==undefined&&!GENDERS.includes(s.selectedGender)||s.hero?.gender!==undefined&&!GENDERS.includes(s.hero.gender))return false;
   const adventure=s.campaign==='adventure';
   if(s.campaign!==undefined&&!adventure)return false;
   if(s.encounterId!=null&&(!adventure||!Object.hasOwn(REGION_ENCOUNTERS,s.encounterId)))return false;

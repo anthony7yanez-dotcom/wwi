@@ -1,3 +1,4 @@
+import { PATROLS, patrolPose, patrolLength, validPatrols } from './patrols.js';
 import { CHAPTER_MAPS, chapterBlockers, chapterObjects, chapterInteract, chapterFinish, chapterObjective, CHAPTER_FINISHES, validChapter, remember } from './chapter.js';
 import { addItem } from './inventory.js';
 import { validSave, heroStats, startEncounter, log, initializeAdventure } from './engine.js';
@@ -66,7 +67,7 @@ MAPS.shrine.exits=[MAPS.shrine.exit];
 Object.assign(MAPS,CHAPTER_MAPS);
 MAPS.shrine.exits.push({edge:'north',label:'Inner sanctuary',destination:'sanctuary',spawn:{x:480,y:560},chapterOnly:true});
 export function mapExits(world){return MAPS[world.map].exits.filter(e=>!e.chapterOnly||world.chapter?.sealOpened);}
-export function enemySpawns(world){return ENEMY_SPAWNS.map(e=>world.chapter&&e.id==='shrine-warden'?{...e,map:'sanctuary'}:e).filter(e=>!world.chapter||e.id!=='shrine-warden'||world.chapter.ritualSeen);}
+export function enemySpawns(world){return ENEMY_SPAWNS.map(e=>({...e,...patrolPose(e.id,world.patrols?.[e.id]||0)})).map(e=>world.chapter&&e.id==='shrine-warden'?{...e,map:'sanctuary'}:e).filter(e=>!world.chapter||e.id!=='shrine-warden'||world.chapter.ritualSeen);}
 export const ENEMY_SPAWNS=[
   {id:'wood-wolf',map:'forest',x:304,y:336,encounter:'ash-wolf'},
   {id:'wood-sentinel',map:'forest',x:480,y:160,encounter:'cult-sentinel'},
@@ -74,6 +75,16 @@ export const ENEMY_SPAWNS=[
   {id:'shrine-warden',map:'shrine',x:480,y:304,encounter:'root-warden'},
 ];
 export function activeEnemies(world){return enemySpawns(world).filter(e=>e.map===world.map&&!world.cleared.includes(e.id));}
+export function advanceEnemyPatrols(world,seconds) {
+  if(world.battle||world.conversation||!Number.isFinite(seconds)||seconds<=0)return false;
+  let changed=false;
+  for(const enemy of activeEnemies(world)){
+    const distance=((world.patrols?.[enemy.id]||0)+PATROLS[enemy.id].speed*Math.min(seconds,.05))%patrolLength(enemy.id),pose=patrolPose(enemy.id,distance);
+    if(!canStand(world,pose.x,pose.y))continue;
+    world.patrols??={};world.patrols[enemy.id]=distance;changed=true;
+  }
+  return changed;
+}
 export function nearbyEnemy(world,radius=32){return activeEnemies(world).find(e=>Math.hypot(e.x-world.x,e.y-world.y)<=radius)||null;}
 export function expeditionInfo(world){
   if(world.chapter)return chapterObjective(world);
@@ -94,7 +105,7 @@ export const FIELD_NODES=[
 ];
 export function worldObjects(world,game){return [...MAPS[world.map].objects.filter(o=>!world.chapter||o.id!=='shrine-altar'),...FIELD_NODES.filter(n=>n.map===world.map&&(!world.chapter||hasClass(game,n.classId))),...(world.chapter?chapterObjects(world,game):game?companionObjects(world,game):[])];}
 export function createWorld() {
-  return {map:'courtyard',x:464,y:368,facing:'south',conversation:null,cleared:[],battle:null,grace:0,flags:{caretaker:false,traveler:false,chest:false,quest:false,gate:false,ward:false,reported:false,forestChest:false,shrine:false,...Object.fromEntries(FIELD_NODES.map(n=>[n.id,false]))},visited:['courtyard']};
+  return {map:'courtyard',x:464,y:368,facing:'south',conversation:null,cleared:[],battle:null,grace:0,patrols:{},flags:{caretaker:false,traveler:false,chest:false,quest:false,gate:false,ward:false,reported:false,forestChest:false,shrine:false,...Object.fromEntries(FIELD_NODES.map(n=>[n.id,false]))},visited:['courtyard']};
 }
 
 export function canStand(world,x,y) {
@@ -139,6 +150,12 @@ export function moveWorld(world,dx,dy,seconds,running=false) {
 export function nearbyObject(world,game=null) {
   return worldObjects(world,game).map(object=>({object,distance:Math.hypot(world.x-object.x,world.y-object.y)}))
     .filter(item=>item.distance<=58).sort((a,b)=>a.distance-b.distance)[0]?.object||null;
+}
+
+export function nearbyInteraction(world,game=null){
+  const enemy=nearbyEnemy(world,58),object=nearbyObject(world,game);
+  const distance=target=>target?Math.hypot(target.x-world.x,target.y-world.y):Infinity;
+  return distance(enemy)<=distance(object)?{enemy,object:null}:{enemy:null,object};
 }
 
 export function questInfo(world) {
@@ -273,7 +290,7 @@ export function finishWorldBattle(world,game,result){
 }
 
 export function validWorld(world) {
-  if(!world||!validChapter(world)||!MAPS[world.map]||!['north','south','east','west'].includes(world.facing)||!world.flags||!Array.isArray(world.visited)||world.visited.length<1||world.visited.length>Object.keys(MAPS).length||new Set(world.visited).size!==world.visited.length||!world.visited.every(id=>Object.hasOwn(MAPS,id))||!world.visited.includes(world.map))return false;
+  if(!world||!validPatrols(world.patrols)||!validChapter(world)||!MAPS[world.map]||!['north','south','east','west'].includes(world.facing)||!world.flags||!Array.isArray(world.visited)||world.visited.length<1||world.visited.length>Object.keys(MAPS).length||new Set(world.visited).size!==world.visited.length||!world.visited.every(id=>Object.hasOwn(MAPS,id))||!world.visited.includes(world.map))return false;
   if(!Array.isArray(world.cleared)||new Set(world.cleared).size!==world.cleared.length||!world.cleared.every(id=>ENEMY_SPAWNS.some(e=>e.id===id))||!Number.isFinite(world.grace)||world.grace<0||world.grace>96)return false;
   if(world.flags.shrine&&!world.cleared.includes('shrine-warden'))return false;
   if(!Object.keys(createWorld().flags).every(flag=>typeof world.flags[flag]==='boolean'))return false;
