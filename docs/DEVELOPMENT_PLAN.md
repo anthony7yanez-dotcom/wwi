@@ -1,6 +1,14 @@
 # The Hollow — project assessment and development plan
 
-The player's [project vision](PROJECT_VISION.md) is the source of creative direction. This document assesses the current prototype and proposes the next stages. Proposed names, lore, mechanics, and scope below are recommendations, not approved canon. No gameplay or story changes have been made as part of this assessment.
+The player's [project vision](PROJECT_VISION.md) is the source of creative direction. This document assesses the current prototype and proposes the next stages. Proposed names, lore, mechanics, and scope below are recommendations, not approved canon. The assessment below records the baseline before adventure development; the implementation status below describes the approved update.
+
+## Implemented milestone
+
+The player approved the first exploration milestone. It is now implemented as the Ember Courtyard and Ruined Approach: seven-class introduction, keyboard/pointer movement, camera, collisions, two NPC conversations, one-time supply chest, a quest journal, a persistent gate mechanism, ward inspection, return/report quest completion, and versioned saves including unfinished dialogue. Original assets remain intact; complementary maps, NPCs, and props were added under `public/assets/world/`.
+
+The old three-battle game remains available through **Combat prototype** with its existing save key. Adventure progress uses a separate key. Exploration currently uses existing idle poses with movement feedback; full directional walking sheets remain future work. Combat does not yet trigger from the maps. The integrated slice, equipment/relic systems, and larger story remain subsequent stages.
+
+The build now uses esbuild and embeds unique resources through short blob URLs; long base64 values in CSS custom properties exceeded Chromium's limit. Verification includes every embedded PNG decoding successfully, browser gameplay without external requests, and desktop/mobile input and state checks. Managed Chromium can block local file URLs, so direct `file://` testing reports a skip in that environment rather than claiming success.
 
 ## Intended experience
 
@@ -89,7 +97,7 @@ Do not define the flame's true origin, final restoration cost, cult deity, or en
 
 Stage 3 reuses the tested combat prototype; stage 4 reuses class selection. We are adding missing adventure systems rather than recreating those features. Polish accompanies each stage and receives a dedicated pass before sharing the complete slice.
 
-## Smallest next playable milestone — proposed for approval
+## First exploration milestone — approved and implemented
 
 Build a **small settlement courtyard and connected ruined approach**. Names and final geography remain provisional. Use current class choice and existing art; do not add playable companions or switch classes.
 
@@ -114,4 +122,4 @@ First integrated slice target: roughly 15–25 minutes with exploration, dialogu
 - Integrated-slice tests: all classes can solve mandatory gates; encounter return positions persist; victory rewards occur once; equipment/relic effects match descriptions; defeat cannot soft-lock; new and old save paths remain explicit.
 - Before expanding: review atmosphere, exploration pacing, dialogue length, readable interactions, animation continuity, and what the player actually learns about the flame.
 
-Await approval of the next milestone before changing the introduction, core scene flow, or adding the proposed setting and NPC dialogue. This follows the player's immediate instructions in the project vision; preserving the prompt and writing this plan do not alter existing creative decisions.
+The player approved the exploration milestone described above. That approval covers its introduction flow, two local areas, and NPC interactions. Further major story decisions, new playable party members, class switching, and changes to the established art direction still require discussion. The next recommended stage is connecting map encounters to the existing combat system.

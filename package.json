@@ -8,12 +8,13 @@
     "start": "node server.mjs",
     "build": "node scripts/build.mjs",
     "test": "node --test tests/*.test.mjs",
-    "test:browser": "node tests/browser.mjs && node tests/animations.mjs"
+    "test:browser": "node tests/browser.mjs && node tests/animations.mjs && node tests/exploration.mjs"
   },
   "engines": {
     "node": ">=22"
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "playwright": "^1.64.0"
   }
 }

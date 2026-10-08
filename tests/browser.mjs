@@ -10,7 +10,7 @@ try{
  await new Promise((resolve,reject)=>{server.stdout.once('data',resolve);server.once('error',reject);server.once('exit',code=>reject(new Error(`Server exited ${code}`)));});
  browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||['/usr/bin/chromium','/usr/bin/chromium-browser'].find(existsSync),headless:true,args:['--no-sandbox']});
  const page=await browser.newPage({viewport:{width:1440,height:1100}});page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`)});await page.addInitScript(()=>{Math.random=()=>.4;});
- await page.goto(base);await page.evaluate(()=>document.fonts.ready);
+ await page.goto(`${base}/?mode=prototype`);await page.evaluate(()=>document.fonts.ready);
  assert.equal(await page.locator('.prologue').count(),1);assert.equal(await page.locator('.stage-hero').count(),0);
  await page.screenshot({path:'/tmp/hollow-solo-intro.png',fullPage:true});
  await page.locator('#wanderer-name').fill('Ash');await page.locator('#name-form button').click();assert.equal(await page.locator('.calling-choice').count(),7);

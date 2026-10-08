@@ -1,0 +1,56 @@
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright';
+import {spawn} from 'node:child_process';
+import {existsSync} from 'node:fs';
+import {readFile} from 'node:fs/promises';
+import {createGame,startEncounter} from '../src/engine.js';
+import {WORLD_SAVE_KEY} from '../src/world.js';
+
+const base='http://127.0.0.1:3105',key=WORLD_SAVE_KEY;
+const server=spawn(process.execPath,['server.mjs'],{cwd:new URL('../',import.meta.url),env:{...process.env,PORT:'3105'},stdio:['ignore','pipe','pipe']});
+let browser;const errors=[];
+try{
+ await new Promise((resolve,reject)=>{server.stdout.once('data',resolve);server.once('error',reject);server.once('exit',code=>reject(new Error(`Server exited ${code}`)));});
+ browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||['/usr/bin/chromium','/usr/bin/chromium-browser'].find(existsSync),headless:true,args:['--no-sandbox']});
+ const page=await browser.newPage({viewport:{width:1440,height:1100}});page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`)});
+ const saved=()=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)),key);
+ const position=()=>page.locator('#world-canvas').evaluate(c=>({map:c.dataset.map,x:Number(c.dataset.x),y:Number(c.dataset.y)}));
+ async function move(axis,target){const start=await position(),positive=target>start[axis],button=axis==='x'?(positive?'ArrowRight':'ArrowLeft'):(positive?'ArrowDown':'ArrowUp');await page.locator('#world-canvas').focus();await page.keyboard.down(button);try{await page.waitForFunction(({axis,target,positive})=>{const value=Number(document.querySelector('#world-canvas').dataset[axis]);return positive?value>=target-2:value<=target+2;},{axis,target,positive},{timeout:15000});}finally{await page.keyboard.up(button);}}
+ async function finishTalk(){while(await page.locator('[data-talk-next]').count())await page.locator('[data-talk-next]').click();}
+ await page.goto(base);await page.locator('#wanderer-name').fill('Ash');await page.locator('#name-form button').click();await page.locator('[data-class="knight"]').click();await page.locator('[data-action="accept-class"]').click();await page.locator('.world-loading').waitFor({state:'hidden'});
+ assert.equal((await saved()).game.hero.id,'knight');assert.equal((await position()).map,'courtyard');
+ await page.screenshot({path:'/tmp/hollow-exploration-desktop.png',fullPage:true});
+ await move('x',400);await move('y',344);assert.equal(await page.locator('#world-canvas').getAttribute('data-nearby'),'caretaker');await page.keyboard.press('e');
+ const still=await position();await page.keyboard.down('ArrowRight');await page.waitForTimeout(250);await page.keyboard.up('ArrowRight');assert.deepEqual(await position(),still,'Dialogue must freeze movement');
+ await page.locator('[data-talk-next]').click();await page.reload();assert.equal((await saved()).world.conversation.page,1);assert.match(await page.locator('.explore-dialogue p').innerText(),/sacred flame/);await finishTalk();assert.equal((await saved()).world.flags.quest,true);
+ console.log('PASS: class creation, actual walking, NPC interaction, frozen dialogue movement, and mid-dialogue save/reload');
+ await move('x',304);await move('y',400);await page.keyboard.press('Enter');await finishTalk();assert.equal((await saved()).world.flags.traveler,true);
+ await move('y',288);await move('x',240);await page.keyboard.press('e');assert.equal((await saved()).game.potions,5);await page.reload();assert.equal((await saved()).game.potions,5);await finishTalk();await page.keyboard.press('e');await finishTalk();assert.equal((await saved()).game.potions,5);
+ console.log('PASS: traveler dialogue and one-time chest reward, including reload during collection');
+ await move('y',336);await page.keyboard.down('ArrowRight');await page.waitForFunction(()=>document.querySelector('#world-canvas').dataset.map==='approach',null,{timeout:15000});await page.keyboard.up('ArrowRight');assert.equal((await saved()).world.visited.length,2);
+ await move('x',600);await page.keyboard.down('ArrowRight');await page.waitForTimeout(400);await page.keyboard.up('ArrowRight');assert.ok((await position()).x<=616,'Closed gate must stop player');
+ await move('x',560);await move('y',288);await page.keyboard.press('e');assert.equal((await saved()).world.flags.gate,false);await finishTalk();assert.equal((await saved()).world.flags.gate,true);
+ await move('y',336);await move('x',848);await page.keyboard.press('e');await finishTalk();assert.equal((await saved()).world.flags.ward,true);
+ await page.screenshot({path:'/tmp/hollow-exploration-approach.png',fullPage:true});
+ await page.keyboard.down('ArrowLeft');await page.waitForFunction(()=>document.querySelector('#world-canvas').dataset.map==='courtyard',null,{timeout:15000});await page.keyboard.up('ArrowLeft');await move('x',400);await page.keyboard.press('e');await finishTalk();assert.equal((await saved()).world.flags.reported,true);assert.equal(await page.locator('#world-quest-status').innerText(),'COMPLETED');
+ console.log('PASS: real map navigation, gate collision, mechanism choice, ward inspection, return travel, and local quest completion');
+ const completed=await saved();await page.reload();const reloaded=await saved();assert.deepEqual(reloaded.world.flags,completed.world.flags);assert.ok(Math.abs((await position()).x-completed.world.x)<.1);
+ await page.locator('.world-controls [data-action="journal"]').click();assert.equal(await page.locator('.quest-checklist .done').count(),4);const paused=await position();await page.keyboard.down('ArrowDown');await page.waitForTimeout(200);await page.keyboard.up('ArrowDown');assert.deepEqual(await position(),paused);await page.keyboard.press('Escape');
+ const combat=createGame('witch','Old save');startEncounter(combat);await page.evaluate(combat=>localStorage.setItem('the-hollow-solo-v2',JSON.stringify(combat)),combat);
+ await page.locator('.world-prototype [data-action="prototype"]').click();await page.locator('.stage-hero').waitFor();assert.match(await page.locator('.hero-card').innerText(),/Old save/);assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('the-hollow-solo-v2'))),combat);
+ await page.locator('[data-action="adventure"]').click();await page.locator('#world-canvas').waitFor();assert.equal((await saved()).world.flags.reported,true);
+ console.log('PASS: journal/menu pause, persistent position and quest, and separate legacy combat saves');
+ for(const width of [390,320]){
+  await page.setViewportSize({width,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  const before=await position(),button=page.locator('[data-direction="south"]');await button.scrollIntoViewIfNeeded();const bounds=await button.boundingBox();await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);await page.mouse.down();await page.waitForTimeout(250);await page.mouse.up();assert.ok((await position()).y>before.y+10,'Pointer controls move the player');
+  if(width===390)await page.screenshot({path:'/tmp/hollow-exploration-mobile.png',fullPage:true});
+ }
+ await page.setViewportSize({width:1280,height:1000});await page.emulateMedia({reducedMotion:'reduce'});const before=await position();await page.keyboard.down('ArrowRight');await page.waitForTimeout(150);await page.evaluate(()=>window.dispatchEvent(new Event('blur')));const stopped=await position();await page.waitForTimeout(150);await page.keyboard.up('ArrowRight');assert.ok(stopped.x>before.x);assert.ok(Math.abs((await position()).x-stopped.x)<3,'Lost focus clears held movement');
+ console.log('PASS: mobile layouts, pointer movement, reduced-motion navigation, and lost-focus input reset');
+ const html=await readFile(new URL('../play.html',import.meta.url),'utf8');const offline=await browser.newPage({viewport:{width:1280,height:1000}});const requests=[];offline.on('pageerror',e=>errors.push(e.message));offline.on('request',r=>{if(r.resourceType()!=='document'&&/^https?:/.test(r.url()))requests.push(r.url());});await offline.route(`${base}/adventure-offline`,r=>r.fulfill({status:200,contentType:'text/html',body:html}));await offline.goto(`${base}/adventure-offline`);await offline.locator('#name-form button').click();await offline.locator('[data-class="monk"]').click();await offline.locator('[data-action="accept-class"]').click();await offline.locator('.world-loading').waitFor({state:'hidden'});await offline.locator('#world-canvas').focus();await offline.keyboard.down('ArrowRight');await offline.waitForTimeout(250);await offline.keyboard.up('ArrowRight');assert.ok(Number(await offline.locator('#world-canvas').getAttribute('data-x'))>475);assert.deepEqual(requests,[]);
+ const decoded=await offline.evaluate(async()=>{const paths=Object.keys(window.HOLLOW_ASSETS).filter(path=>path.endsWith('.png'));return await Promise.all(paths.map(async path=>{const image=new Image();image.src=window.HOLLOW_ASSETS[path];await image.decode();return [path,image.naturalWidth,image.naturalHeight];}));});assert.equal(decoded.filter(([path])=>path.includes('/animations/')).length,7);assert.equal(decoded.filter(([path])=>path.includes('/world/')).length,4);assert.ok(decoded.every(([,width,height])=>width>0&&height>0));
+ console.log('PASS: standalone adventure, all embedded PNGs decode, and movement without external requests');
+ try { const local=await browser.newPage({viewport:{width:1280,height:1000}});local.on('pageerror',e=>errors.push(e.message));await local.goto(new URL('../play.html',import.meta.url).href);await local.locator('#name-form button').click();await local.locator('[data-class="paladin"]').click();await local.locator('[data-action="accept-class"]').click();await local.locator('.world-loading').waitFor({state:'hidden'});assert.equal(await local.locator('#world-canvas').getAttribute('data-map'),'courtyard');await local.locator('.world-prototype [data-action="prototype"]').click();await local.locator('#name-form button').click();await local.locator('[data-action="accept-class"]').click();await local.locator('[data-action="begin"]').click();await local.locator('.arena').waitFor();await local.locator('[data-action="adventure"]').click();await local.locator('#world-canvas').waitFor();assert.equal(await local.locator('#world-canvas').getAttribute('data-map'),'courtyard');console.log('PASS: actual local-file launch and adventure/combat switching without a server'); } catch(error) { if(!error.message.includes('ERR_BLOCKED_BY_ADMINISTRATOR'))throw error;console.log('SKIP: Managed Chromium blocks file URLs; offline assets and gameplay are verified through a local document route.'); }
+ await page.evaluate(key=>localStorage.setItem(key,'{"broken":true}'),key);await page.reload();assert.equal(await page.locator('.prologue').count(),1);assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('the-hollow-solo-v2'))),combat);
+ assert.deepEqual(errors,[]);console.log('PASS: corrupt adventure-save recovery preserves combat progress; no browser errors');
+}finally{await browser?.close();server.kill();}
