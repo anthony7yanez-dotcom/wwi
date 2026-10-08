@@ -52,11 +52,11 @@ let idleTimer;
 function stopIdle(){clearInterval(idleTimer);}
 function startIdle(){stopIdle();let frame=0;idleTimer=setInterval(()=>{if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;frame=(frame+1)%6;app.querySelectorAll('.frame-sprite:not(.playing-frames)').forEach(el=>setFrame(el,0,frame));},200);}
 function setFrame(el,row,frame){el.dataset.frame=String(frame);el.dataset.row=String(row);el.style.backgroundPosition=`${frame*20}% ${row*100/3}%`;}
-async function playFrames(el,action,duration){
+async function playFrames(el,action,duration,hold=false){
  const row={attack:1,guard:2,skill:3,potion:0}[action];el.classList.add('playing-frames');
  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){setFrame(el,row,3);await animationDelay(duration);}
  else {const start=performance.now();await new Promise(resolve=>{function tick(now){const progress=Math.min(1,(now-start)/duration);setFrame(el,row,Math.min(5,Math.floor(progress*6)));if(progress<1)requestAnimationFrame(tick);else resolve();}requestAnimationFrame(tick);});}
- el.classList.remove('playing-frames');setFrame(el,0,0);
+ if(hold){setFrame(el,row,3);}else{el.classList.remove('playing-frames');setFrame(el,0,0);}
 }
 function render(){stopIdle();app.innerHTML=header()+(state.status==='intro'?renderIntro():renderJourney())+'<dialog id="game-dialog" aria-labelledby="dialog-title"></dialog>';startIdle();if(modal)renderModal();}
 function renderModal(){
@@ -75,7 +75,7 @@ async function performAction(action){
  const move=characterMove(current.id,action),reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
  motion={...move,duration:reduced?120:move.duration,heroId:current.id,action};busy=true;notice='';render();launchProjectile();tone();
  try {
-  const hero=app.querySelector('.stage-hero'),frames=playFrames(hero.querySelector('.frame-sprite'),action,motion.duration);
+  const hero=app.querySelector('.stage-hero'),frames=playFrames(hero.querySelector('.frame-sprite'),action,motion.duration,action==='guard');
   await animationDelay(motion.duration*.55);
   if(result.damage||result.burnDamage){const hud=app.querySelector('.enemy-hud');hud.classList.add('contact');floatingNumber(hud,result.damage+result.burnDamage);hud.querySelector('.enemy-meter>span').style.width=`${next.enemy.hp/next.enemy.maxHp*100}%`;hud.querySelector('.enemy-numbers>span:last-child').innerHTML=`${next.enemy.hp}<em> / ${next.enemy.maxHp}</em>`;}
   if(result.healed){hero.classList.add('receiving-heal');floatingNumber(hero,result.healed,true);}
