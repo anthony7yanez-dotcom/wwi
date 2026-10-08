@@ -1,3 +1,4 @@
+import { guideDestination, guidePath, guideHint } from './guidance.js';
 import { characterAppearance } from './sprites.js';
 import { chapterTrigger, CHAPTER_TITLE, PUBLIC_LORE } from './chapter.js';
 import { MAPS, WORLD_WIDTH, WORLD_HEIGHT, moveWorld, nearbyObject, interactWorld, finishWorldDialogue, questInfo, activeEnemies, nearbyEnemy, expeditionInfo, worldObjects, canStand, FIELD_NODES, mapExits, advanceEnemyPatrols, nearbyInteraction } from './world.js';
@@ -15,10 +16,10 @@ export function renderExploration(game,world,icon,esc) {
   <div class="world-controls"><div class="world-dpad" aria-label="Movement controls"><button data-direction="north" aria-label="Move north">↑</button><button data-direction="west" aria-label="Move west">←</button><button data-direction="south" aria-label="Move south">↓</button><button data-direction="east" aria-label="Move east">→</button></div><div><strong>A world waiting to be discovered.</strong><span>WASD / arrows · Shift to run · E to interact · P for menu</span></div><button class="world-interact-button" data-run-toggle aria-pressed="false">Run</button><button class="text-button" data-action="journal">${icon('book',16)}Journal</button></div>
   <div class="explorer-card"><div class="explorer-portrait"> <div class="frame-sprite ${characterAppearance(game.hero.id,game.hero.gender).className}" data-gender="${characterAppearance(game.hero.id,game.hero.gender).gender}" data-rows="${characterAppearance(game.hero.id,game.hero.gender).rows}" role="img" aria-label="${game.hero.id} character"></div></div><div><h3>${esc(game.name)}</h3><span>LEVEL ${game.hero.level} · ${game.hero.id.toUpperCase()}</span></div><div class="explorer-resource">${icon('heart',15)}<strong id="world-health">${game.hero.hp}</strong><span>Health</span></div><div class="explorer-resource">${icon('flask',15)}<strong id="world-potions">${game.potions}</strong><span>Potions</span></div><button class="text-button" data-action="character">Character${icon('chevron',14)}</button></div><div class="overworld-party"><span id="world-party-count">${activeParty(game).length} travelling · ${world.chapter?game.companions.length:partyMembers(game).length} ${world.chapter?'companions recruited':'recruited'}</span><button class="text-button" data-action="party">Manage party ${icon('people',15)}</button></div></section>
   <aside class="world-sidebar"><section class="quest-card"><div class="eyebrow">${icon('flag',14)} YOUR JOURNEY</div><h2 id="world-quest-title">${quest.title}</h2><p id="world-quest-text">${quest.text}</p><div class="quest-progress">${[0,1,2,3,4].map(i=>`<i data-quest-step="${i}" class="${i<=quest.step?'reached':''}"></i>`).join('')}</div><div class="quest-footer"><span id="world-quest-status">${quest.complete?'COMPLETED':'MAIN QUEST'}</span><button class="text-button" data-action="journal">Read journal${icon('book',13)}</button></div></section>
-  <section class="quest-card expedition-card"><div class="eyebrow">${icon('flag',14)} BEYOND THE WARD</div><h2 id="expedition-title"></h2><p id="expedition-text"></p><div class="quest-footer"><span id="expedition-status">REGION QUEST</span></div></section><section class="world-notes"><div class="eyebrow">${icon('map',14)} PLACES & PEOPLE</div><h3>Ember courtyard</h3><p>A caretaker tends a failing fire. A traveler waits for an open road.</p><div class="world-discovery" id="world-discovery">${world.visited.length} of ${world.chapter?7:4} places discovered</div><h3>Follow your curiosity</h3><p>${world.chapter?'Speak with neighbors, explore the houses, and follow the shrine road. Open Menu to manage equipment and discovered Wayflames.':'Meet companions on the ward roads. Every class brings its own combat role and a way to investigate the world.'} Crimson marks signal enemies; contact begins a battle.</p><small>The flame changes with the story. Take your time exploring.</small></section>
+  <section class="quest-card expedition-card"><div class="eyebrow">${icon('flag',14)} BEYOND THE WARD</div><h2 id="expedition-title"></h2><p id="expedition-text"></p><div class="quest-footer"><span id="expedition-status">REGION QUEST</span></div></section><section class="quest-card guide-card"><div class="eyebrow">✦ LUMA · ROAD FAIRY</div><h3>A little light to follow</h3><p id="guide-hint"></p><button data-guide-toggle class="text-button" aria-pressed="true">Hide guidance · G</button><small>Gold diamonds mark your objective. I can show the road, but the choices are yours.</small></section><section class="world-notes"><div class="eyebrow">${icon('map',14)} PLACES & PEOPLE</div><h3>Ember courtyard</h3><p>A caretaker tends a failing fire. A traveler waits for an open road.</p><div class="world-discovery" id="world-discovery">${world.visited.length} of ${world.chapter?7:4} places discovered</div><h3>Follow your curiosity</h3><p>${world.chapter?'Speak with neighbors, explore the houses, and follow the shrine road. Open Menu to manage equipment and discovered Wayflames.':'Meet companions on the ward roads. Every class brings its own combat role and a way to investigate the world.'} Crimson marks signal enemies; contact begins a battle.</p><small>The flame changes with the story. Take your time exploring.</small></section>
   <section class="world-prototype"><span class="eyebrow">THE COMBAT PROTOTYPE</span><p>Your seven classes and animated battles are still available.</p><button data-action="prototype">Play combat prototype${icon('arrow',15)}</button></section></aside></div>
   <footer class="page-footer"><span><i></i><span id="world-save-message">Your journey is saved as you explore.</span></span><button data-action="restart">New adventure</button></footer>
-  <div class="world-textures" aria-hidden="true">${Object.keys(MAPS).map(id=>`<span class="world-art-${id}"></span>`).join('')}<span class="world-npc-art"></span><span class="world-villager-art"></span><span class="world-props-art"></span><span class="world-enemy-art"></span><span class="world-enemy-motions"></span><span class="world-player-atlas locomotion-${game.hero.id} ${characterAppearance(game.hero.id,game.hero.gender).alternate?'locomotion-alt':''}"></span>${COMPANIONS.map(c=>`<span class="world-atlas-${c.id} locomotion-${c.id}"></span>`).join('')}</div></main>`;
+  <div class="world-textures" aria-hidden="true">${Object.keys(MAPS).map(id=>`<span class="world-art-${id}"></span>`).join('')}<span class="world-fairy-art"></span><span class="world-npc-art"></span><span class="world-villager-art"></span><span class="world-props-art"></span><span class="world-enemy-art"></span><span class="world-enemy-motions"></span><span class="world-player-atlas locomotion-${game.hero.id} ${characterAppearance(game.hero.id,game.hero.gender).alternate?'locomotion-alt':''}"></span>${COMPANIONS.map(c=>`<span class="world-atlas-${c.id} locomotion-${c.id}"></span>`).join('')}</div></main>`;
 }
 
 export function journalContent(world,game=null) {
@@ -35,8 +36,11 @@ export function mountWorld({root,world,game,onSave,isBlocked,onEncounter,onMenu=
   let disposed=false,raf,lastTime=performance.now(),dirty=false,lastSaved=0,lastNear=null,toastTimer,lastMap=world.map,runToggle=false,animationDistance=0,encounterPending=false;
   const reduce=()=>window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const imageFrom=(selector,property)=>{const value=getComputedStyle(root.querySelector(selector)).getPropertyValue(property).trim(),match=value.match(/^url\(["']?(.*?)["']?\)$/);const image=new Image();if(match)image.src=match[1];return image;};
-  const images={...Object.fromEntries(Object.keys(MAPS).map(id=>[id,imageFrom(`.world-art-${id}`,'--world-art')])),npc:imageFrom('.world-npc-art','--world-art'),villagers:imageFrom('.world-villager-art','--world-art'),props:imageFrom('.world-props-art','--world-art'),heroes:Object.fromEntries(COMPANIONS.map(c=>[c.id,imageFrom('.world-atlas-'+c.id,'--locomotion')])),player:imageFrom('.world-player-atlas','--locomotion'),enemies:imageFrom('.world-enemy-art','--world-art'),enemyMotions:imageFrom('.world-enemy-motions','--world-art')};
-  let trail=[],trailDistance=108;
+  const images={...Object.fromEntries(Object.keys(MAPS).map(id=>[id,imageFrom(`.world-art-${id}`,'--world-art')])),npc:imageFrom('.world-npc-art','--world-art'),villagers:imageFrom('.world-villager-art','--world-art'),props:imageFrom('.world-props-art','--world-art'),heroes:Object.fromEntries(COMPANIONS.map(c=>[c.id,imageFrom('.world-atlas-'+c.id,'--locomotion')])),player:imageFrom('.world-player-atlas','--locomotion'),enemies:imageFrom('.world-enemy-art','--world-art'),enemyMotions:imageFrom('.world-enemy-motions','--world-art'),fairy:imageFrom('.world-fairy-art','--world-art')};
+  let trail=[],trailDistance=108,guide=null,path=[],lastGuideAt=-Infinity,guideSignature='',fairyPosition=null;
+  const guideButton=root.querySelector('[data-guide-toggle]');
+  function toggleGuide(){if(blocked())return;world.guideEnabled=world.guideEnabled===false;save();canvas.focus({preventScroll:true});}
+  guideButton.addEventListener('click',toggleGuide);
   function seedTrail(){const direction={south:[0,1],north:[0,-1],east:[1,0],west:[-1,0]}[world.facing];trail=[];trailDistance=108;let point={x:world.x,y:world.y},blocked=false;for(let d=0;d<=108;d+=3){const x=world.x-direction[0]*d,y=world.y-direction[1]*d;if(!blocked&&canStand(world,x,y))point={x,y};else blocked=true;trail.unshift({...point,facing:world.facing,distance:108-d});}}
   seedTrail();
   ctx.imageSmoothingEnabled=false;
@@ -94,6 +98,7 @@ export function mountWorld({root,world,game,onSave,isBlocked,onEncounter,onMenu=
   function keydown(event){
     if(event.ctrlKey||event.metaKey||event.altKey||event.target.matches('input,textarea,select'))return;
     if(isBlocked())return;
+    if(['g','G'].includes(event.key)&&!event.repeat){event.preventDefault();toggleGuide();return;}
     if(event.key==='Shift'){if(!world.conversation)keys.add('run');return;}
     const movement={ArrowUp:'north',w:'north',W:'north',ArrowDown:'south',s:'south',S:'south',ArrowLeft:'west',a:'west',A:'west',ArrowRight:'east',d:'east',D:'east'}[event.key];
     if(movement){event.preventDefault();if(!world.conversation)keys.add(movement);return;}
@@ -117,6 +122,66 @@ export function mountWorld({root,world,game,onSave,isBlocked,onEncounter,onMenu=
   window.addEventListener('keydown',keydown);window.addEventListener('keyup',keyup);window.addEventListener('blur',resetInput);window.addEventListener('pagehide',resetInput);document.addEventListener('visibilitychange',resetInput);
 
   function fill(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),w,h);}
+  function updateGuidance(time){
+    const next=guideDestination(world,game),signature=JSON.stringify([world.map,next?.id,next?.target?.id,Math.round(world.x/16),Math.round(world.y/16),world.flags.gate,world.chapter?.sealOpened]);
+    if(signature!==guideSignature&&time-lastGuideAt>200||time-lastGuideAt>800){
+      if(guide?.map!==next?.map)fairyPosition=null;
+      guide=next;guideSignature=signature;lastGuideAt=time;
+      path=world.guideEnabled===false?[]:guidePath(world,game,guide);
+      root.querySelector('#guide-hint').textContent=guideHint(guide);
+    }
+    const enabled=world.guideEnabled!==false;
+    guideButton.setAttribute('aria-pressed',String(enabled));guideButton.textContent=enabled?'Hide guidance · G':'Show guidance · G';
+    canvas.dataset.questTarget=guide?.target?.id||guide?.id||'';canvas.dataset.guide=String(enabled);
+    canvas.dataset.guidePath=JSON.stringify(path);
+  }
+  function drawGuidance(time){
+    if(!guide||world.guideEnabled===false||world.conversation)return;
+    ctx.save();ctx.strokeStyle='#eccb7755';ctx.lineWidth=2;ctx.setLineDash([2,10]);ctx.beginPath();
+    path.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();ctx.restore();
+  }
+  function drawFairy(time){
+    if(!guide||world.guideEnabled===false||world.conversation)return;
+    const ground=path[Math.min(4,path.length-1)];
+    if(ground){
+      fairyPosition??={...ground};
+      const x=fairyPosition.x+(ground.x-fairyPosition.x)*.12,y=fairyPosition.y+(ground.y-fairyPosition.y)*.12;
+      if(canStand(world,x,y,game))Object.assign(fairyPosition,{x,y});else fairyPosition={...ground};
+      const hover=reduce()?0:Math.sin(time/260)*3,fx=fairyPosition.x,fy=fairyPosition.y-39+hover;
+      glow(fx,fy,24,'#79d4da36');
+      const image=images.fairy;
+      if(image.complete&&image.naturalWidth){const sw=image.naturalWidth/6;ctx.drawImage(image,(reduce()?0:Math.floor(time/85)%6)*sw,0,sw,image.naturalHeight,fx-12,fy-24,24,48);}
+      else {ctx.fillStyle='#a7ebdf';ctx.beginPath();ctx.ellipse(fx,fy,4,7,0,0,Math.PI*2);ctx.fill();}
+    }
+    const bob=reduce()?0:Math.sin(time/380)*2,x=guide.x,y=guide.kind==='exit'?guide.y-13:guide.y-72+bob;
+    ctx.save();ctx.fillStyle='#f6d38b';ctx.strokeStyle='#172326';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x,y-8);ctx.lineTo(x+7,y);ctx.lineTo(x,y+8);ctx.lineTo(x-7,y);ctx.closePath();ctx.stroke();ctx.fill();ctx.restore();
+  }
+  // Anchor actual opaque feet, rather than the padded atlas cell, to the floor.
+  const footBounds=new Map();
+  function groundBounds(image,sx,sy,sw,sh){
+    const key=image.src+':'+sx+':'+sy;if(footBounds.has(key))return footBounds.get(key);
+    const sample=document.createElement('canvas');sample.width=Math.ceil(sw);sample.height=Math.ceil(sh);
+    const sc=sample.getContext('2d',{willReadFrequently:true});sc.drawImage(image,sx,sy,sw,sh,0,0,sample.width,sample.height);
+    const pixels=sc.getImageData(0,0,sample.width,sample.height).data,width=sample.width,height=sample.height;
+    const visited=new Uint8Array(width*height),queue=new Int32Array(width*height);let best={area:0,top:0,bottom:height};
+    // Generated sheets occasionally contain a few pixels from an adjacent cell.
+    // Locate the main connected silhouette so those pixels cannot move its feet.
+    for(let origin=0;origin<visited.length;origin++){
+      if(visited[origin]||pixels[origin*4+3]<128)continue;
+      let read=0,write=1,top=height,bottom=0;queue[0]=origin;visited[origin]=1;
+      while(read<write){const index=queue[read++],x=index%width,y=Math.floor(index/width);top=Math.min(top,y);
+        if(pixels[index*4+3]>180&&Math.max(pixels[index*4],pixels[index*4+1],pixels[index*4+2])>48)bottom=Math.max(bottom,y+1);
+        for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const nx=x+dx,ny=y+dy,next=ny*width+nx;if(nx<0||nx>=width||ny<0||ny>=height||visited[next]||pixels[next*4+3]<128)continue;visited[next]=1;queue[write++]=next;}
+      }
+      if(write>best.area)best={area:write,top:Math.max(0,top-3),bottom:bottom||height};
+    }
+    const bounds={top:best.top/height,bottom:Math.min(height,best.bottom+1)/height};footBounds.set(key,bounds);return bounds;
+  }
+  function drawGrounded(image,sx,sy,sw,sh,left,ground,width,height){
+    const bounds=groundBounds(image,sx,sy,sw,sh),crop=(bounds.bottom-bounds.top)*sh;
+    ctx.drawImage(image,sx,sy+bounds.top*sh,sw,crop,left,ground-height*(bounds.bottom-bounds.top),width,height*(bounds.bottom-bounds.top));
+  }
+
   function glow(x,y,r,color){const gradient=ctx.createRadialGradient(x,y,2,x,y,r);gradient.addColorStop(0,color);gradient.addColorStop(1,'transparent');ctx.fillStyle=gradient;ctx.fillRect(x-r,y-r,r*2,r*2);}
   function shadow(x,y,w=30){ctx.fillStyle='#0008';ctx.beginPath();ctx.ellipse(x,y,w/2,5,0,0,Math.PI*2);ctx.fill();}
   function flame(x,y,time){const phase=reduce()?0:Math.floor(time/140)%3;fill(x-13,y-7,26,12,'#24201c');fill(x-10,y-11,20,4,'#65503a');fill(x-7,y-25-phase*2,14,17+phase*2,'#b75128');fill(x-4,y-24+phase,8,17-phase,'#e99b43');fill(x-2,y-20,4,10,'#f8d687');glow(x,y-15,90,'#ef992e35');}
@@ -129,7 +194,7 @@ export function mountWorld({root,world,game,onSave,isBlocked,onEncounter,onMenu=
     const {x,y}=object,kind=object.id==='field-paladin'&&!world.flags[object.id]?'ward':object.kind;
     if(kind==='companion'||kind==='counterpart'){drawCharacter(object.classId,x,y,'south',false,false,0);ctx.fillStyle='#d4be77';ctx.fillRect(x-2,y-66,4,4);return;}
     shadow(x,y,['npc','resident'].includes(kind)?26:34);
-    if(kind==='resident'){const size=images.npc.naturalWidth/2;if(size)ctx.drawImage(images.npc,(object.sprite%2)*size,0,size,images.npc.naturalHeight,x-30,y-57,60,64);return;}
+    if(kind==='resident'){const size=images.npc.naturalWidth/2;if(size)drawGrounded(images.npc,(object.sprite%2)*size,0,size,images.npc.naturalHeight,x-30,y,60,64);return;}
     if(kind==='cult'||kind==='guardian'){drawEnemy({x,y,encounter:kind==='cult'?'cult-sentinel':'root-warden'},time);return;}
     if(kind==='door'){fill(x-13,y-34,26,35,'#3f3025');fill(x-10,y-30,20,30,'#201c17');fill(x+6,y-15,3,3,'#c9ac6c');return;}
     if(kind==='rune'||kind==='seal'){fill(x-19,y-30,38,32,'#363d34');ctx.fillStyle=world.chapter.puzzle.includes(object.symbol?.toLowerCase())||world.chapter.sealOpened?'#e1c180':'#a59b79';ctx.font='10px Georgia';ctx.textAlign='center';ctx.fillText(object.symbol||'SEAL',x,y-14);if(world.chapter.sealOpened||world.chapter.puzzle.includes(object.symbol?.toLowerCase()))glow(x,y-15,38,'#d7a75c33');return;}
@@ -143,7 +208,7 @@ export function mountWorld({root,world,game,onSave,isBlocked,onEncounter,onMenu=
       return;
     }
     if(kind==='npc'){
-      if(images.npc.complete&&images.npc.naturalWidth){const size=images.npc.naturalWidth/2;ctx.drawImage(images.npc,object.sprite*size,0,size,images.npc.naturalHeight,x-32,y-57,64,64);}
+      if(images.npc.complete&&images.npc.naturalWidth){const size=images.npc.naturalWidth/2;drawGrounded(images.npc,object.sprite*size,0,size,images.npc.naturalHeight,x-32,y,64,64);}
       else{fill(x-9,y-28,18,26,object.sprite?'#633c34':'#827252');fill(x-6,y-37,12,13,'#342a24');fill(x-4,y-30,8,6,'#bca082');fill(x-12,y-12,5,10,'#242821');}
       if(!object.sprite)glow(x-11,y-12,35,'#e7ac412b');
     } else if(kind==='fire')flame(x,y,time);
@@ -170,33 +235,34 @@ export function mountWorld({root,world,game,onSave,isBlocked,onEncounter,onMenu=
     const pose=locomotionFrame(world.facing,moving,running,animationDistance,reduce(),characterAppearance(game.hero.id,game.hero.gender).alternate?6:4);
     canvas.dataset.motion=pose.mode;canvas.dataset.animRow=String(pose.row);canvas.dataset.animFrame=String(pose.frame);
     drawCharacter(game.hero.id,world.x,world.y,world.facing,moving,running,animationDistance,true);
-    ctx.fillStyle='#e4cf8a';ctx.fillRect(Math.round(world.x)-2,Math.round(world.y)+8,4,2);
+    ctx.strokeStyle='#8bdae2';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(world.x,world.y,17,5,0,0,Math.PI*2);ctx.stroke();
   }
   function drawCharacter(id,x,y,facing,moving,running,distance,player=false){
     const alternate=player&&characterAppearance(id,game.hero.gender).alternate,pose=locomotionFrame(facing,moving,running,distance,reduce(),alternate?6:4),image=player?images.player:images.heroes[id];shadow(x,y,29);
-    if(image.complete&&image.naturalWidth){const sw=image.naturalWidth/(alternate?6:4),sh=image.naturalHeight/(alternate?12:8),frame=pose.frame;ctx.save();ctx.translate(Math.round(x),Math.round(y));if(alternate&&id==='knight'&&facing==='west')ctx.scale(-1,1);ctx.drawImage(image,frame*sw,(pose.row+(alternate?4:0))*sh,sw,sh,-34,-60,68,68);ctx.restore();}
+    if(image.complete&&image.naturalWidth){const sw=image.naturalWidth/(alternate?6:4),sh=image.naturalHeight/(alternate?12:8),frame=pose.frame,sy=(pose.row+(alternate?4:0))*sh;ctx.save();ctx.translate(x,y);if(alternate&&id==='knight'&&facing==='west')ctx.scale(-1,1);ctx.filter='drop-shadow(1px 0 0 #111c20) drop-shadow(-1px 0 0 #111c20) brightness(1.12)';drawGrounded(image,frame*sw,sy,sw,sh,-34,0,68,68);ctx.restore();}
   }
   function followers(){return activeParty(game).slice(1).map((h,i)=>{const distance=trailDistance-(i+1)*36;const point=trail.find(p=>p.distance>=distance)||trail[trail.length-1];return {id:h.id,...point};});}
   function drawEnemy(spawn,time){
     const e=REGION_ENCOUNTERS[spawn.encounter],row={wolf:0,sentinel:4,warden:8}[e.sprite],frame=reduce()?0:Math.floor((spawn.distance||0)/7)%(e.sprite==='wolf'?5:6),size=e.boss?96:e.sprite==='wolf'?70:68;
     shadow(spawn.x,spawn.y,e.boss?46:31);
     const image=images.enemyMotions;
-    if(image.complete&&image.naturalWidth){const sw=image.naturalWidth/(e.sprite==='wolf'?5:6),sh=image.naturalHeight/12;ctx.save();ctx.translate(spawn.x,spawn.y);if(spawn.facing==='east')ctx.scale(-1,1);ctx.drawImage(image,frame*sw,row*sh,sw,sh,-size/2,-size*.9,size,size);ctx.restore();}
+    if(image.complete&&image.naturalWidth){const sw=image.naturalWidth/(e.sprite==='wolf'?5:6),sh=image.naturalHeight/12;ctx.save();ctx.translate(spawn.x,spawn.y);if(spawn.facing==='east')ctx.scale(-1,1);drawGrounded(image,frame*sw,row*sh,sw,sh,-size/2,0,size,size);ctx.restore();}
     ctx.fillStyle='#c17760';ctx.fillRect(spawn.x-2,spawn.y-size*.88-7,4,4);
   }
   function draw(time,moving,running){
     const width=canvas.width;
     ctx.clearRect(0,0,width,400);ctx.save();
     const cameraX=Math.max(0,Math.min(WORLD_WIDTH-width,world.x-width/2)),cameraY=Math.max(0,Math.min(WORLD_HEIGHT-400,world.y-210));
-    if(['home','supply'].includes(world.map)){const zoom=Math.min(width/WORLD_WIDTH,400/WORLD_HEIGHT);ctx.translate((width-WORLD_WIDTH*zoom)/2,(400-WORLD_HEIGHT*zoom)/2);ctx.scale(zoom,zoom);}else ctx.translate(-Math.round(cameraX),-Math.round(cameraY));
+    ctx.translate(-Math.round(cameraX),-Math.round(cameraY));
     const mapImage=images[world.map];
-    if(mapImage.complete&&mapImage.naturalWidth)ctx.drawImage(mapImage,0,0,WORLD_WIDTH,WORLD_HEIGHT);else fallbackMap(world.map);
+    ctx.save();ctx.filter='saturate(.65) brightness(.82)';if(mapImage.complete&&mapImage.naturalWidth)ctx.drawImage(mapImage,0,0,WORLD_WIDTH,WORLD_HEIGHT);else fallbackMap(world.map);ctx.restore();
+    drawGuidance(time);
     if(world.chapter?.lightRestored&&world.map==='courtyard'){glow(496,272,240,'#f0b56427');glow(400,304,180,'#f0b5641e');}
     const items=[...worldObjects(world,game).map(object=>({y:object.y,paint:()=>drawObject(object,time)})),...activeEnemies(world).map(enemy=>({y:enemy.y,paint:()=>drawEnemy(enemy,time)})),...followers().map(h=>({y:h.y,paint:()=>drawCharacter(h.id,h.x,h.y,h.facing,moving,running,h.distance)})),{y:world.y,paint:()=>drawHero(time,moving,running)}];
     if(world.map==='approach')items.push({y:448,paint:drawGate});
-    items.sort((a,b)=>a.y-b.y).forEach(item=>item.paint());
+    items.sort((a,b)=>a.y-b.y).forEach(item=>item.paint());drawFairy(time);
     const near=nearbyObject(world,game);
-    if(near&&!world.conversation){ctx.strokeStyle='#d4bd7c';ctx.lineWidth=1;ctx.strokeRect(near.x-20,near.y-43,40,49);}
+    if(near&&!world.conversation){ctx.strokeStyle='#ebd495';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(near.x,near.y,22,8,0,0,Math.PI*2);ctx.stroke();ctx.font='11px Georgia';ctx.textAlign='center';const label=near.name;const w=ctx.measureText(label).width;fill(near.x-w/2-5,near.y-84,w+10,17,'#101b1def');ctx.fillStyle='#f1e5c7';ctx.fillText(label,near.x,near.y-72);}
     for(const exit of mapExits(world)){const x=exit.edge==='east'?924:exit.edge==='west'?36:480,y=exit.edge==='north'?39:exit.edge==='south'?607:341;ctx.fillStyle='#d6c490';ctx.font='14px Georgia';ctx.textAlign='center';ctx.fillText({east:'›',west:'‹',north:'⌃',south:'⌄'}[exit.edge],x,y);}
     ctx.restore();
     const vignette=ctx.createRadialGradient(width/2,210,100,width/2,210,width*.6);vignette.addColorStop(0,'transparent');vignette.addColorStop(1,'#070e12a0');ctx.fillStyle=vignette;ctx.fillRect(0,0,width,400);
@@ -204,7 +270,8 @@ export function mountWorld({root,world,game,onSave,isBlocked,onEncounter,onMenu=
     ctx.fillStyle='#070d0dbb';ctx.fillRect(miniX,14,75,53);ctx.strokeStyle='#8b816150';ctx.strokeRect(miniX+.5,14.5,75,53);
     MAPS[world.map].blockers.forEach(b=>fill(miniX+4+b.x/15,18+b.y/15,b.w/15,b.h/15,'#556356'));
     activeEnemies(world).forEach(e=>fill(miniX+3+e.x/15,17+e.y/15,2,2,'#c87969'));
-    fill(miniX+3+world.x/15,17+world.y/15,3,3,'#edc278');
+    if(guide&&world.guideEnabled!==false)fill(miniX+3+guide.x/15,17+guide.y/15,4,4,'#ffe29a');
+    fill(miniX+3+world.x/15,17+world.y/15,3,3,'#7ddbe2');
   }
   function updateNearby(){
     const {enemy,object}=nearbyInteraction(world,game),signature=enemy?.id||object?.id||'';
@@ -220,7 +287,7 @@ export function mountWorld({root,world,game,onSave,isBlocked,onEncounter,onMenu=
       const pressed=new Set([...keys,...pointers.values()]);
       const dx=Number(pressed.has('east'))-Number(pressed.has('west')),dy=Number(pressed.has('south'))-Number(pressed.has('north'));
       running=runToggle||pressed.has('run');const before={x:world.x,y:world.y};
-      const result=moveWorld(world,dx,dy,seconds,running);moving=result.moved;animationDistance+=result.transition?0:Math.hypot(world.x-before.x,world.y-before.y);
+      const result=moveWorld(world,dx,dy,seconds,running,game);moving=result.moved;animationDistance+=result.transition?0:Math.hypot(world.x-before.x,world.y-before.y);
       if(result.moved&&!result.transition){trailDistance+=Math.hypot(world.x-before.x,world.y-before.y);trail.push({x:world.x,y:world.y,facing:world.facing,distance:trailDistance});if(trail.length>250)trail.shift();}
       const patrolled=advanceEnemyPatrols(world,seconds);
       if(result.moved||patrolled){dirty=true;if(time-lastSaved>1000)save();}
@@ -229,11 +296,11 @@ export function mountWorld({root,world,game,onSave,isBlocked,onEncounter,onMenu=
     }else if(keys.size||pointers.size)resetInput();
     if(lastMap!==world.map){lastMap=world.map;seedTrail();updateHUD();onScene(world.map);}
     if(!blocked()&&world.chapter){const c=chapterTrigger(world);if(c){world.conversation=c;resetInput();save();updateHUD();renderDialogue(true);}}
-    updateNearby();draw(time,moving,running);
+    updateGuidance(time);updateNearby();draw(time,moving,running);
     root.querySelector('.world-loading').hidden=images[world.map].complete&&Boolean(images[world.map].naturalWidth);
     raf=requestAnimationFrame(tick);
   }
   function triggerEncounter(enemy){if(blocked())return;encounterPending=true;resetInput();stage.classList.add('entering-battle');stage.querySelector('.encounter-transition').textContent=`${REGION_ENCOUNTERS[enemy.encounter].enemy} approaches`;onEncounter(enemy.id);}
   updateHUD();renderDialogue();raf=requestAnimationFrame(tick);
-  return {resetInput,destroy(){resetInput();disposed=true;cancelAnimationFrame(raf);clearTimeout(toastTimer);runButton.removeEventListener('click',toggleRun);window.removeEventListener('resize',resize);window.removeEventListener('keydown',keydown);window.removeEventListener('keyup',keyup);window.removeEventListener('blur',resetInput);window.removeEventListener('pagehide',resetInput);document.removeEventListener('visibilitychange',resetInput);controlButtons.forEach(button=>{button.removeEventListener('pointerdown',pointerdown);button.removeEventListener('pointerup',pointerup);button.removeEventListener('pointercancel',pointerup);button.removeEventListener('lostpointercapture',pointerup);});interactButton.removeEventListener('click',interact);}};
+  return {resetInput,destroy(){resetInput();disposed=true;cancelAnimationFrame(raf);clearTimeout(toastTimer);guideButton.removeEventListener('click',toggleGuide);runButton.removeEventListener('click',toggleRun);window.removeEventListener('resize',resize);window.removeEventListener('keydown',keydown);window.removeEventListener('keyup',keyup);window.removeEventListener('blur',resetInput);window.removeEventListener('pagehide',resetInput);document.removeEventListener('visibilitychange',resetInput);controlButtons.forEach(button=>{button.removeEventListener('pointerdown',pointerdown);button.removeEventListener('pointerup',pointerup);button.removeEventListener('pointercancel',pointerup);button.removeEventListener('lostpointercapture',pointerup);});interactButton.removeEventListener('click',interact);}};
 }

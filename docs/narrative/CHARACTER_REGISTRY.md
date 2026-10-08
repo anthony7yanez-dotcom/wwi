@@ -43,6 +43,7 @@ The mappings preserve seven classes while adapting story functions. They do not 
 | Mother Vaska (future) | Uncompromising Covenant revolutionary; consistent opposition and responsibility for followers' harm. | IV ideological confrontation, later reassessment. | Partial suppressed history; cannot conclusively demonstrate safe extinction early. |
 | Archivist Calia Renn (future) | Preserves neglected or dangerous physical records. | III research and maps; later contradictions and investigation. | Incomplete scholarly interpretation, explicit provenance. |
 | Elder Maelin (provisional) | Starting elder remembers stronger sacred light and inherited sayings. | Can be reconciled with the established caretaker only with approval. | Contradictions are inherited and misunderstood, not knowingly spoiled. |
+| Luma (I) | A small road fairy carrying a warm ember; patient and practical. Optional visual guide, never a recruit or combatant. | I: points to the active discovered objective and navigable road; guidance can be hidden. | Knows local roads and the protagonist’s recorded objectives. Offers no hidden history, prophecy, or undiscovered puzzle solution. |
 | Covenant ritualist (I) | An unnamed extremist attempting to break the local sanctuary seal. | I confrontation activates guardian; no faction-wide moral verdict. | Destructive methods and limited ideology; never delivers the hidden truth. |
 
 ## Party and narrative invariants

@@ -1,8 +1,8 @@
 /* Movement is applied to the hero who selected the action, before changing turns. */
 .stage-hero { --fx-color: #c5d6a4; }
 .stage-hero.performing { z-index: 3; }
-.stage-hero.performing > .sprite {
-  animation: var(--move-name) var(--move-duration) steps(9, end) both;
+.stage-hero.performing > :is(.sprite,.frame-sprite) {
+  animation: var(--move-name) var(--move-duration) cubic-bezier(.32,.05,.2,1) both;
   animation-delay: 0s;
   will-change: transform;
 }
@@ -18,14 +18,14 @@
 .move-flash { width: 33%; height: 22%; left: 80%; top: 34%; background: currentColor; clip-path: polygon(0 40%,30% 30%,30% 0,55% 30%,90% 10%,70% 43%,100% 70%,60% 65%,45% 100%,32% 68%,0 75%); }
 .move-motes { inset: 0; }
 .move-motes i { position: absolute; left: calc(9% + var(--particle) * 17%); bottom: 10%; width: 5px; height: 5px; background: currentColor; box-shadow: 0 0 6px currentColor; }
-.move-projectile { width: 18px; height: 9px; position: absolute; border: 2px solid var(--fx-color); background: #e6f7ff; box-shadow: 0 0 7px 3px var(--fx-color); border-radius: 40%; pointer-events: none; opacity: 0; z-index: 4; animation: projectile-flight calc(var(--move-duration) * .4) steps(12, end) calc(var(--move-duration) * .33) both; }
+.move-projectile { width: 18px; height: 9px; position: absolute; border: 2px solid var(--fx-color); background: #e6f7ff; box-shadow: 0 0 7px 3px var(--fx-color); border-radius: 40%; pointer-events: none; opacity: 0; z-index: 4; animation: projectile-flight calc(var(--move-duration) * .4) linear calc(var(--move-duration) * .33) both; }
 .move-projectile.tracer { height: 2px; width: 35px; border: 0; background: #fff0c3; box-shadow: 0 0 5px var(--fx-color); border-radius: 0; }
 .move-projectile.soul { width: 24px; height: 17px; border-radius: 50%; background: #cc9af1; animation-direction: reverse; }
 .damage-number { position: absolute; top: 20%; left: 52%; color: #ffe4b0; font: 600 25px var(--serif); text-shadow: 2px 2px #341409, 0 0 8px #000; pointer-events: none; z-index: 8; animation: number-rise .55s ease-out both; }
 .damage-number.healing-number { color: #b9f3c8; }
 .enemy-hud.contact { animation: enemy-contact .34s steps(5, end); }
 .arena[data-phase="enemy"] .enemy-hud { animation: enemy-strike .44s ease-out; }
-.stage-hero.taking-hit > .sprite { animation: hero-hit .44s steps(6, end) both; }
+.stage-hero.taking-hit > :is(.sprite,.frame-sprite) { animation: hero-hit .44s ease-out both; }
 .stage-hero.receiving-heal:before { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, #bce6a36b, transparent 90%); clip-path: polygon(10% 100%, 25% 0, 75% 0, 90% 100%); animation: healing-column .65s ease-out both; pointer-events: none; }
 .guard-ward { width: 73%; height: 73%; position: absolute; left: 30%; top: 18%; color: var(--fx-color); opacity: 0; pointer-events: none; }
 .stage-hero.guarding .guard-ward { opacity: .3; filter: drop-shadow(0 0 3px currentColor); }
@@ -119,5 +119,5 @@
   .performing .move-effects { opacity:.55; }
   .performing .move-sigil { opacity:.5; }
   .move-projectile, .damage-number, .move-motes { display:none; }
-  .stage-hero.performing > .sprite, .stage-hero.taking-hit > .sprite, .enemy-hud.contact { animation:none; }
+  .stage-hero.performing > :is(.sprite,.frame-sprite), .stage-hero.taking-hit > :is(.sprite,.frame-sprite), .enemy-hud.contact { animation:none; }
 }

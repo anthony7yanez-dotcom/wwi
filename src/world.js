@@ -103,16 +103,22 @@ export const FIELD_NODES=[
  {id:'field-gunslinger',classId:'gunslinger',map:'approach',x:736,y:256,kind:'lever',name:'High chain catch',text:'A broken chain catch sits too high to reach. A precise ricochet could release it.',reward:'The shot catches the iron latch. A courier’s pouch drops within reach. You find a route seal from the missing caravan.',gold:40},
  {id:'field-monk',classId:'monk',map:'forest',x:384,y:416,kind:'ward',name:'Restless pool',text:'Ripples obscure the pool’s reflection. It needs a still, patient touch.',reward:'The water settles, revealing a token from the lost monastery delegation. A moment of silence restores everyone’s focus.',focus:true},
 ];
-export function worldObjects(world,game){return [...MAPS[world.map].objects.filter(o=>!world.chapter||o.id!=='shrine-altar'),...FIELD_NODES.filter(n=>n.map===world.map&&(!world.chapter||hasClass(game,n.classId))),...(world.chapter?chapterObjects(world,game):game?companionObjects(world,game):[])];}
+export function worldObjects(world,game){return [...MAPS[world.map].objects.filter(o=>!world.chapter||o.id!=='shrine-altar'),...FIELD_NODES.filter(n=>n.map===world.map&&(!world.chapter||game&&hasClass(game,n.classId))),...(world.chapter?chapterObjects(world,game):game?companionObjects(world,game):[])];}
 export function createWorld() {
-  return {map:'courtyard',x:464,y:368,facing:'south',conversation:null,cleared:[],battle:null,grace:0,patrols:{},flags:{caretaker:false,traveler:false,chest:false,quest:false,gate:false,ward:false,reported:false,forestChest:false,shrine:false,...Object.fromEntries(FIELD_NODES.map(n=>[n.id,false]))},visited:['courtyard']};
+  return {layoutVersion:2,map:'courtyard',x:464,y:368,facing:'south',conversation:null,cleared:[],battle:null,grace:0,patrols:{},flags:{caretaker:false,traveler:false,chest:false,quest:false,gate:false,ward:false,reported:false,forestChest:false,shrine:false,...Object.fromEntries(FIELD_NODES.map(n=>[n.id,false]))},visited:['courtyard']};
 }
 
-export function canStand(world,x,y) {
+// These footprints match the painted furniture and southern doorway. Older
+// saves are checked against their original layout before a safe relocation.
+export const FLOOR_BLOCKERS = {
+  home:[{x:112,y:160,w:136,h:80},{x:578,y:176,w:40,h:32},{x:32,y:480,w:352,h:128},{x:576,y:480,w:352,h:128}],
+  supply:[{x:112,y:160,w:136,h:80},{x:578,y:176,w:40,h:32},{x:32,y:480,w:352,h:128},{x:576,y:480,w:352,h:128}],
+};
+export function canStand(world,x,y,game=null,ignoreResidents=false) {
   if(!MAPS[world.map]||!Number.isFinite(x)||!Number.isFinite(y))return false;
   if(x<24||x>WORLD_WIDTH-24||y<32||y>WORLD_HEIGHT-24)return false;
   const map=MAPS[world.map];
-  const blockers=[...map.blockers.filter(b=>!(world.chapter&&world.map==='shrine'&&b.y===32&&b.x===224)),...chapterBlockers(world)];
+  const blockers=[...(world.layoutVersion===2?FLOOR_BLOCKERS[world.map]||[]:[]),...map.blockers.filter(b=>!(world.chapter&&world.map==='shrine'&&b.y===32&&b.x===224)),...chapterBlockers(world)];
   if(world.chapter&&world.map==='shrine')blockers.push({x:224,y:32,w:224,h:64},{x:512,y:32,w:224,h:64});
   // Openings through the edge walls match the two connected road exits.
   if(x<40&&!mapExits(world).some(e=>e.edge==='west'&&y>=304&&y<=368))return false;
@@ -121,21 +127,28 @@ export function canStand(world,x,y) {
   if(y>WORLD_HEIGHT-40&&!mapExits(world).some(e=>e.edge==='south'&&x>=448&&x<=512))return false;
   if(world.map==='approach'&&!world.flags.gate)blockers.push({x:624,y:224,w:24,h:224});
   if(blockers.some(b=>x+PLAYER_RADIUS>b.x&&x-PLAYER_RADIUS<b.x+b.w&&y+PLAYER_RADIUS>b.y&&y-PLAYER_RADIUS<b.y+b.h))return false;
+  if(!ignoreResidents&&world.layoutVersion===2&&worldObjects(world,game).some(o=>['resident','counterpart','companion'].includes(o.kind)&&Math.hypot(x-o.x,y-o.y)<20))return false;
   return !map.objects.filter(o=>!world.chapter||o.id!=='shrine-altar').some(o=>o.kind!=='sign'&&Math.hypot(x-o.x,y-o.y)<PLAYER_RADIUS+(o.kind==='npc'?12:13));
 }
 
-export function moveWorld(world,dx,dy,seconds,running=false) {
+export function moveWorld(world,dx,dy,seconds,running=false,game=null) {
   if(!Number.isFinite(dx)||!Number.isFinite(dy)||!Number.isFinite(seconds)||seconds<=0||(!dx&&!dy))return {moved:false,transition:false};
   const length=Math.hypot(dx,dy),dt=Math.min(seconds,.05);
   const speed=running?RUN_SPEED:WALK_SPEED;
   const stepX=dx/length*speed*dt,stepY=dy/length*speed*dt;
   world.facing=Math.abs(dx)>Math.abs(dy)?(dx>0?'east':'west'):(dy>0?'south':'north');
   const oldX=world.x,oldY=world.y;
+  // A story unlock can introduce a companion where an older player is standing.
+  // Allow stepping away from that overlap while retaining all floor collisions.
+  const residents=world.layoutVersion===2?worldObjects(world,game).filter(o=>['resident','counterpart','companion'].includes(o.kind)):[];
+  const canStep=(x,y)=>canStand(world,x,y,game)||canStand(world,x,y,game,true)&&residents.some(o=>Math.hypot(world.x-o.x,world.y-o.y)<20)&&residents.every(o=>{
+    const before=Math.hypot(world.x-o.x,world.y-o.y),after=Math.hypot(x-o.x,y-o.y);return after>=20||before<20&&after>before;
+  });
   // Small substeps prevent passing through narrow collisions or NPCs.
   const steps=Math.max(1,Math.ceil(Math.max(Math.abs(stepX),Math.abs(stepY))/3));
   for(let i=0;i<steps;i++){
-    if(canStand(world,world.x+stepX/steps,world.y))world.x+=stepX/steps;
-    if(canStand(world,world.x,world.y+stepY/steps))world.y+=stepY/steps;
+    if(canStep(world.x+stepX/steps,world.y))world.x+=stepX/steps;
+    if(canStep(world.x,world.y+stepY/steps))world.y+=stepY/steps;
   }
   world.grace=Math.max(0,world.grace-Math.hypot(world.x-oldX,world.y-oldY));
   const exit=mapExits(world).find(e=>(e.edge==='east'&&world.x>=932&&world.y>=304&&world.y<=368)||(e.edge==='west'&&world.x<=28&&world.y>=304&&world.y<=368)||(e.edge==='north'&&world.y<=36&&world.x>=448&&world.x<=512)||(e.edge==='south'&&world.y>=604&&world.x>=448&&world.x<=512));
@@ -290,7 +303,7 @@ export function finishWorldBattle(world,game,result){
 }
 
 export function validWorld(world) {
-  if(!world||!validPatrols(world.patrols)||!validChapter(world)||!MAPS[world.map]||!['north','south','east','west'].includes(world.facing)||!world.flags||!Array.isArray(world.visited)||world.visited.length<1||world.visited.length>Object.keys(MAPS).length||new Set(world.visited).size!==world.visited.length||!world.visited.every(id=>Object.hasOwn(MAPS,id))||!world.visited.includes(world.map))return false;
+  if(!world||![undefined,2].includes(world.layoutVersion)||![undefined,true,false].includes(world.guideEnabled)||!validPatrols(world.patrols)||!validChapter(world)||!MAPS[world.map]||!['north','south','east','west'].includes(world.facing)||!world.flags||!Array.isArray(world.visited)||world.visited.length<1||world.visited.length>Object.keys(MAPS).length||new Set(world.visited).size!==world.visited.length||!world.visited.every(id=>Object.hasOwn(MAPS,id))||!world.visited.includes(world.map))return false;
   if(!Array.isArray(world.cleared)||new Set(world.cleared).size!==world.cleared.length||!world.cleared.every(id=>ENEMY_SPAWNS.some(e=>e.id===id))||!Number.isFinite(world.grace)||world.grace<0||world.grace>96)return false;
   if(world.flags.shrine&&!world.cleared.includes('shrine-warden'))return false;
   if(!Object.keys(createWorld().flags).every(flag=>typeof world.flags[flag]==='boolean'))return false;
@@ -320,7 +333,23 @@ export function validAdventureSave(save) {
 }
 
 export function migrateAdventureSave(save){
-  if(validAdventureSave(save))return structuredClone(save);
+  if(validAdventureSave(save)){
+    const copy=structuredClone(save);
+    if(copy.world&&copy.world.layoutVersion!==2){
+      copy.world.layoutVersion=2;
+      const relocate=position=>{
+        const area={...copy.world,map:position.map};
+        if(canStand(area,position.x,position.y,copy.game))return;
+        // Search outward from the old feet position, preserving nearby context.
+        for(let radius=4;radius<=960;radius+=4)for(let angle=0;angle<32;angle++){
+          const x=position.x+Math.cos(angle*Math.PI/16)*radius,y=position.y+Math.sin(angle*Math.PI/16)*radius;
+          if(canStand(area,x,y,copy.game)){position.x=x;position.y=y;return;}
+        }
+      };
+      relocate(copy.world);if(copy.world.battle)relocate(copy.world.battle.returnTo);
+    }
+    return validAdventureSave(copy)?copy:null;
+  }
   if(save?.version!==1||!validSave(save.game)||!['intro','preparing'].includes(save.game.status))return null;
   const migrated=structuredClone(save);migrated.version=2;
   if(save.game.status==='intro'){if(save.world!==null)return null;return migrated;}

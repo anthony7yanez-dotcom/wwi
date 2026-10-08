@@ -1,4 +1,5 @@
 import sharp from 'sharp';
+import { encode85, decode85, BASE85_ALPHABET } from './encoding.mjs';
 import { rm, mkdir, cp, readFile, writeFile } from 'node:fs/promises';
 import { build } from 'esbuild';
 import { fileURLToPath } from 'node:url';
@@ -23,12 +24,12 @@ for (const match of [...standalone.matchAll(/<link rel="stylesheet" href="([^\"]
     const packed = asset[1].endsWith('.png') ? await sharp(source).webp({lossless:true,effort:6}).toBuffer() : source;
     const useWebp=packed.length<source.length,bytes=useWebp?packed:source;
     const type = asset[1].endsWith('.woff2') ? 'font/woff2' : useWebp ? 'image/webp' : 'image/png';
-    assets[asset[1]] = {type,data:bytes.toString('base64')};
+    assets[asset[1]] = {type,size:bytes.length,data:encode85(bytes)};
   }
   const styleScript = `<script>{const sheet=document.createElement('style');sheet.textContent=${inlineJSON(css)}.replace(/url\\(['"]?(\\/public\\/[^)'"\\s]+)['"]?\\)/g,(_,path)=>"url('"+window.HOLLOW_ASSETS[path]+"')");document.head.append(sheet);}</script>`;
   standalone = standalone.replace(match[0],()=>styleScript);
 }
-const assetScript = `<script>window.HOLLOW_ASSETS={};for(const [path,asset] of Object.entries(${inlineJSON(assets)})){const bytes=Uint8Array.from(atob(asset.data),c=>c.charCodeAt(0));window.HOLLOW_ASSETS[path]=URL.createObjectURL(new Blob([bytes],{type:asset.type}));}</script>`;
+const assetScript = `<script>{const decode=${decode85.toString()},alphabet=${inlineJSON(BASE85_ALPHABET)};window.HOLLOW_ASSETS={};for(const [path,asset] of Object.entries(${inlineJSON(assets)})){const bytes=decode(asset.data,asset.size,alphabet);window.HOLLOW_ASSETS[path]=URL.createObjectURL(new Blob([bytes],{type:asset.type}));}}</script>`;
 standalone = standalone.replace('</title>',()=>`</title>${assetScript}`);
 const bundle = await build({ entryPoints:[fileURLToPath(new URL('src/app.js',root))], bundle:true, write:false, format:'iife', target:'es2022' });
 const code = bundle.outputFiles[0].text.replace(/<\/script/gi,'<\\/script');

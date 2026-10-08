@@ -1,0 +1,66 @@
+/* Near party / far enemy diagonal framing, with the original pixel designs. */
+.party-arena{background-image:url('/public/assets/battle/forest.png');background-size:cover;background-position:center;isolation:isolate}
+.party-arena.region-forest{background-image:url('/public/assets/battle/forest.png')}
+.party-arena.region-shrine,.party-arena.region-sanctuary{background-image:url('/public/assets/battle/sanctuary.png')}
+.party-arena .arena-shade{background:linear-gradient(#081b2355,transparent 45%,#08131a77)}
+.party-arena .enemy-hud{left:auto;right:18px;top:52px;width:220px;background:#101b20ed;border-color:#a48b5c88}
+.party-arena .adventure-stage{inset:0;width:100%;height:100%;display:block;pointer-events:none}
+.party-arena .adventure-stage .stage-hero{position:absolute;left:calc(48% + var(--slot)*12%);bottom:calc(132px - var(--slot)*28px);translate:-50% 0;width:clamp(100px,20%,150px);height:155px;max-width:150px;z-index:calc(3 + var(--slot));transform-origin:center bottom}
+.party-arena .adventure-stage .stage-hero.performing{z-index:8}
+.party-arena .stage-name{bottom:-8px;background:#111e24e8;border-color:#847a5d88;font-size:11px;color:#efe6d1}
+.party-arena .stage-active .hero-shadow{box-shadow:0 0 0 2px #98d6dca0,0 0 15px #79c2ca66}
+.party-arena .hero-shadow{bottom:8px;background:#071318c9;width:65%;height:12px}
+.party-arena .battle-enemy,.party-arena .battle-enemy.enemy-warden{right:auto;left:11%;bottom:146px;width:170px;height:170px;scale:-1 1;filter:drop-shadow(1px 0 0 #07151b) drop-shadow(-1px 0 0 #07151b) drop-shadow(0 8px 3px #0009)}
+.party-arena .battle-enemy.enemy-warden{width:205px;height:205px;bottom:142px;left:8%}
+.frame-sprite.rear-sprite{background-size:600% 800%;filter:drop-shadow(1px 0 0 #07151b) drop-shadow(-1px 0 0 #07151b) drop-shadow(0 4px 1px #0009);transform-origin:50% 94%}
+.frame-sprite.rear-knight{--atlas:url('/public/assets/battle/knight.png');scale:-1 1}
+.frame-sprite.rear-warrior{--atlas:url('/public/assets/battle/warrior.png')}
+.frame-sprite.rear-paladin{--atlas:url('/public/assets/battle/paladin.png');scale:-1 1}
+.frame-sprite.rear-sorcerer{--atlas:url('/public/assets/battle/sorcerer.png');scale:-1 1}
+.frame-sprite.rear-witch{--atlas:url('/public/assets/battle/witch.png')}
+.frame-sprite.rear-gunslinger{--atlas:url('/public/assets/battle/gunslinger.png')}
+.frame-sprite.rear-monk{--atlas:url('/public/assets/battle/monk.png')}
+.party-arena .stage-hero.performing{animation:rear-lunge var(--move-duration) cubic-bezier(.3,0,.2,1) both}
+.party-arena .stage-hero.performing[data-move=guard]{animation-name:rear-brace}
+.party-arena .stage-hero.performing[data-move=skill]{animation-name:rear-channel}
+.party-arena .stage-hero.performing[data-hero=knight][data-move=skill],.party-arena .stage-hero.performing[data-hero=warrior][data-move=skill]{animation-name:rear-lunge}
+.party-arena .stage-hero.performing:is([data-hero=sorcerer],[data-hero=witch],[data-hero=gunslinger])[data-move=attack]{animation-name:rear-channel}
+.party-arena .stage-hero.performing[data-move=potion]{animation-name:potion-drink}
+.party-arena .move-effects{scale:-1 1}
+.party-arena[data-phase=enemy] .battle-enemy{transform:none}
+.party-arena .battle-enemy.playing-enemy[data-move=attack]{animation:enemy-advance var(--enemy-duration,800ms) ease-in-out both}
+.party-arena .battle-enemy.playing-enemy[data-move=heavy]{animation:enemy-heavy var(--enemy-duration,1100ms) ease-in-out both}
+.stage-hero.taking-hit>.frame-sprite{animation-timing-function:ease-out}
+.world-fairy-art{--world-art:url('/public/assets/world/fairy.png')}
+.guide-card{border-color:#7c91805c;background:linear-gradient(135deg,#273d3655,#18201c)}
+.guide-card h3{font:500 23px var(--serif);color:#dfd5b4;margin:12px 0}
+.guide-card p{color:#b6d2c2;min-height:40px}
+.guide-card small{display:block;color:#97a993;font-size:9px;line-height:1.8;margin-top:15px}
+.world-stage{border-color:#82907a66}.world-location{background:#0d1b20ed}.world-interaction{background:#17272b}.explorer-card{background:#19272a}
+@keyframes rear-lunge{0%,100%{transform:translate(0,0)}22%{transform:translate(9px,4px) rotate(3deg)}52%{transform:translate(-47px,-19px) rotate(-5deg)}70%{transform:translate(-34px,-12px)} }
+@keyframes rear-brace{0%,100%{transform:translate(0,0)}35%,70%{transform:translate(3px,6px) scaleY(.95)}}
+@keyframes rear-channel{0%,100%{transform:translate(0,0)}30%{transform:translate(3px,-4px)}55%{transform:translate(-7px,-12px)}75%{transform:translate(-3px,-6px)}}
+@keyframes enemy-advance{0%,100%{transform:translate(0,0)}25%{transform:translate(5px,-3px)}55%{transform:translate(-30px,12px)}75%{transform:translate(-16px,6px)}}
+@keyframes enemy-heavy{0%,100%{transform:translate(0,0)}25%{transform:translate(0,-7px) scale(1.04)}55%{transform:translate(-42px,17px) scale(1.08)}75%{transform:translate(-12px,7px)}}
+@media(max-width:650px){
+ .party-arena .adventure-stage .stage-hero{left:calc(45% + var(--slot)*12%);bottom:calc(120px - var(--slot)*24px);width:100px;height:120px;max-width:100px}
+ .party-arena .enemy-hud{right:12px;left:auto;width:185px;top:46px;padding:9px}
+ .party-arena .battle-enemy{left:5%;bottom:155px;width:125px;height:125px}
+ .party-arena .battle-enemy.enemy-warden{left:3%;bottom:142px;width:153px;height:153px}
+ .party-arena .stage-name{font-size:10px;max-width:90px;padding:3px 5px}
+ .party-arena .arena-top{font-size:6px;gap:6px}
+}
+@media(prefers-reduced-motion:reduce){
+ .party-arena .stage-hero.performing,.party-arena .stage-hero.taking-hit,.party-arena .battle-enemy.playing-enemy{animation:none;transform:none}
+}
+
+/* Use the evenly divided action atlas; the old idle sheet has unequal rows. */
+.party-arena .battle-enemy{background-image:url('/public/assets/world/enemy-motions.png');background-size:600% 1200%;animation:none}
+.party-arena .battle-enemy.enemy-wolf{background-size:500% 1200%}
+
+/* Move the actor container; sprite mirroring must not reverse a lunge. */
+.party-arena .stage-hero.performing>.rear-sprite,.party-arena .stage-hero.taking-hit>.rear-sprite{animation:none}
+.party-arena .stage-hero.taking-hit{animation:rear-hit .44s ease-out var(--hit-delay,0ms) both}
+.party-arena .battle-enemy.enemy-hit{animation:enemy-contact .38s ease-out both}
+@keyframes rear-hit{0%,100%{transform:translate(0,0)}25%{transform:translate(12px,4px);filter:brightness(1.6)}55%{transform:translate(-3px,-1px)}75%{transform:translate(2px,1px)}}
+@media(prefers-reduced-motion:reduce){.party-arena .stage-hero.taking-hit,.party-arena .battle-enemy.enemy-hit{animation:none}}
