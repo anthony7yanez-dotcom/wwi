@@ -28,3 +28,4 @@
 @media(prefers-reduced-motion:reduce){.party-arena[data-phase=enemy] .battle-enemy{transform:none}}
 .party-arena .enemy-hud{z-index:2}
 @media(max-width:650px){.party-battle-main{display:flex;flex-direction:column}.party-battle-main>.game-layout{display:contents}.party-battle-main .battle-column{order:1}.party-battle-main .command-bar{position:static;order:2;margin-bottom:20px}.party-battle-main .side-column{order:3}.party-battle-main .page-footer{order:4}}
+@media(max-width:650px){.party-arena .enemy-hud{right:auto;left:14px;width:175px}}
